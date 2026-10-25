@@ -1,0 +1,16 @@
+-- Adapted from LOT tree oai_074 obligation o062 (k4_scalar_mesh_projection), session x0212,
+-- branch x0212 at commit 82cea2e4, file Submission/Obl/k4_scalar_mesh_projection/Resampling.lean;
+-- only the namespace was renamed into o230's.
+import Submission.Lib.K4ScalarSwitching.Resampling
+
+namespace Submission.Obl.k4_scalar_grid_cartesian_field.Cart
+
+export Submission.Lib.K4ScalarSwitching (
+  conditionalResampling conditionalResampling_markov conditionalResampling_invariant alternatingResampling_invariant
+  conditionalResampling_event_mass conditionalResampling_ae_key normalized_fiber_measure_le compProd_le_of_endpoint_ceiling
+  joint_control_time_transition_le conditionalFiberDensity measurable_conditionalFiberDensity normalizedFiberKernel
+  normalizedFiberKernel_apply normalizedFiberKernel_markov normalizedFiberKernel_le_of_duration_floor normalizedFiberKernel_joint_law
+  conditional_time_kernel_eq_normalized conditional_time_kernel_le_on_long_lines conditional_time_kernel_le_of_bounded_density
+)
+
+end Submission.Obl.k4_scalar_grid_cartesian_field.Cart
