@@ -1,0 +1,104 @@
+-- Adapted from this LOT tree, o265 (k4_staged_weak_breadth_discovery), branch x1031,
+-- commit 2bb8b824, file Submission/Obl/k4_staged_weak_breadth_discovery/Interface.lean;
+-- namespace renamed to this obligation. Attributions in the file are kept.
+-- Adapted from this LOT tree, o204, branch x0749, commit e4d9e4b8c9b3;
+-- source Submission/Obl/k4_uniform_sampled_isotropic_branches/Interface.lean.
+-- Existing source attributions are preserved below.
+
+import Mathlib
+import ChallengeDeps
+
+set_option linter.unusedVariables false
+
+namespace Submission.Obl.k4_physical_parent_potential_candidates
+
+noncomputable section
+
+abbrev Ln : Type := ℕ × (Fin 6 → ℝ)
+
+abbrev Ev : Type := Ln × ℝ
+
+abbrev P2 : Type := EuclideanSpace ℝ (Fin 2)
+
+abbrev P3 : Type := EuclideanSpace ℝ (Fin 3)
+
+abbrev P3c : Type := EuclideanSpace ℂ (Fin 3)
+
+abbrev Po : Type := MvPolynomial (Fin 4) ℝ
+
+abbrev Ob : Type := P3 × ℤ
+
+def exf : ℕ→ (P3→ ℝ)→ Prop := (fun (D:ℕ) (f:P3→ ℝ)=>∃(F:P3c→ ℂ) (P:MvPolynomial (Fin 4) ℂ),P≠0∧P.totalDegree≤ D∧ContDiffOn ℂ ⊤ F (Metric.ball 0 4)∧(∀z∈Metric.ball (0:P3c) 4,MvPolynomial.eval (Fin.snoc (fun i:Fin 3=> z i) (F z)) P=0)∧∀x∈Metric.ball (0:P3) 4,F (WithLp.toLp 2 (fun i:Fin 3=> (x i:ℂ)))=(f x:ℂ))
+
+def cm : (Fin 3→ ℝ)→ Matrix (Fin 3) (Fin 3) ℝ→ ℝ→ (Fin 4→ ℝ)→ Fin 4→ ℝ := (fun (c:Fin 3→ ℝ) (M:Matrix (Fin 3) (Fin 3) ℝ) (B:ℝ) (x:Fin 4→ ℝ)=> ![c 0+∑ j:Fin 3,M 0 j*x j.castSucc,c 1+∑ j:Fin 3,M 1 j*x j.castSucc,c 2+∑ j:Fin 3,M 2 j*x j.castSucc,B*x 3])
+
+def xp : Ln→ ℝ→ Fin 4→ ℝ := (fun (l:Ln) (t:ℝ)=> ![t,l.2 0+t*l.2 3,l.2 1+t*l.2 4,l.2 2+t*l.2 5])
+
+def mk : Prop := ((∀n:ℕ,2≤ n→ n≤ 4→ ∃C:ℝ,0 < C∧∀r:ℝ,0 < r→ ∀(N:Fin n→ ℕ) (a e:(i:Fin n)→ Fin (N i)→ EuclideanSpace ℝ (Fin n)) (w:(i:Fin n)→ Fin (N i)→ ℝ),(∀(i:Fin n) (k:Fin (N i)),‖e i k‖=1)→ (∀(i:Fin n) (k:Fin (N i)),0≤ w i k)→ MeasureTheory.lintegral MeasureTheory.volume (fun x:EuclideanSpace ℝ (Fin n)=> ENNReal.ofReal ((∑ T:((i:Fin n)→ Fin (N i)),|Matrix.det (Matrix.of fun i j:Fin n=> e i (T i) j)| *∏ i:Fin n,(w i (T i)*(Metric.thickening r (Set.range fun t:ℝ=> a i (T i)+t • e i (T i))).indicator (fun _=> (1:ℝ)) x))^((1:ℝ)/((n:ℝ) - 1))))≤ ENNReal.ofReal (C*r^n*∏ i:Fin n,(∑ k:Fin (N i),w i k)^((1:ℝ)/((n:ℝ) - 1)))))
+
+def x : Ln→ ℝ→ Fin 4→ ℝ := (fun l t=> ![t,l.2 0+t*l.2 3,l.2 1+t*l.2 4,l.2 2+t*l.2 5])
+
+def y : Ln→ ℝ→ P2 := (fun l t=> WithLp.toLp 2 ![(x l t) 1,(x l t) 2])
+
+def v : Ln→ P2 := (fun l=> WithLp.toLp 2 ![l.2 3,l.2 4])
+
+def δ : ℝ→ ℝ→ ℝ := (fun N r=> (2:ℝ)^(-(⌊r*Real.log N/Real.log 2⌋:ℤ)))
+
+def obs : ℝ→ ℝ→ Ev→ Ob := (fun B a p=> (WithLp.toLp 2 ![p.2,(x p.1 p.2) 1,(x p.1 p.2) 2],⌊B*(x p.1 p.2) 3/a⌋))
+
+def fmt : (n:ℕ)→ ℝ→ ℕ→ Set (Fin n→ ℝ)→ Prop := (fun n H D A=>∃m₀:ℕ,(m₀:ℝ)≤ H∧∃p₀:Fin m₀→ MvPolynomial (Fin n) ℝ,(∀i₀,(p₀ i₀).totalDegree≤ D)∧∃b₀:(Fin m₀→ Bool)→ Bool,∀x₀,x₀∈A ↔ b₀ (fun i₀=> decide (0≤ MvPolynomial.eval x₀ (p₀ i₀)))=true)
+
+def ch : ℝ→ ℕ→ ℕ→ ℝ→ ℕ→ ℝ→ ℝ→ ℝ→ Set Ev→ P2→ P2→ Matrix (Fin 2) (Fin 2) ℝ→ Po→ Set Ln→ Set Ev→ Prop→ Prop := (fun Nk M D κ T j r Bv Ev c u Q R A F ex=> Matrix.det Q≠0∧‖c‖ +‖u‖≤ Nk^M∧(∑ e:Fin 2,∑ e':Fin 2,(|Q e e'| +|Q⁻¹ e e'|))≤ Nk^M∧(∑ e:Fin 2,∑ e':Fin 2,|Q e e'|)≤ κ/(2:ℝ)^T∧R.totalDegree≤ 2∧(∀e,|R.coeff e|≤ Nk^M)∧MeasurableSet A∧MeasurableSet F∧(∀i,fmt 6 (Nk^M) D {x | (i,x)∈A}∧fmt 7 (Nk^M) D {x₁:Fin 7→ ℝ | ((i,fun j₁:Fin 6=> x₁ j₁.castSucc),x₁ 6)∈F})∧(∀l∈A,(l.1:ℝ)≤ Nk^M∧(∀e,|l.2 e|≤ Nk^M)∧∀t∈Set.Icc (j/(2:ℝ)^T) ((j+1)/(2:ℝ)^T),‖Matrix.toEuclideanLin Q⁻¹ (y l t - c - t • u)‖≤ κ∧|MvPolynomial.eval (x l t) R|≤ κ*δ Nk r∧|MvPolynomial.eval (x l t) (MvPolynomial.pderiv (3:Fin 4) R)|≤ κ*Bv∧|MvPolynomial.eval (x l t) (MvPolynomial.pderiv (3:Fin 4) (MvPolynomial.pderiv (3:Fin 4) R))|≤ κ*Bv^2/δ Nk r)∧(∀p∈F,p∈Ev∧p.1∈A∧p.2∈Set.Icc (j/(2:ℝ)^T) ((j+1)/(2:ℝ)^T)∧Bv/κ≤ |MvPolynomial.eval (x p.1 p.2) (MvPolynomial.pderiv (3:Fin 4) R)|)∧ex)
+
+def pb : (ℕ→ ℝ)→ (ℕ→ ℝ)→ ℝ→ ℝ→ ℝ→ ℝ→ (W:ℕ→ ℕ)→ ((k:ℕ)→ Fin (W k)→ ℝ)→ ((k:ℕ)→ Fin (W k)→ MeasureTheory.Measure Ln)→ ((k:ℕ)→ Fin (W k)→ Set Ev)→ ((k:ℕ)→ Fin (W k)→ Po)→ ((k:ℕ)→ Fin (W k)→ ℝ)→ (ℝ→ ℝ)→ ((k:ℕ)→ Fin (W k)→ ℝ→ Ob→ ENNReal)→ ((k:ℕ)→ Fin (W k)→ ℝ→ (Ob × (Fin 2→ ℤ))→ ENNReal)→ Prop := (fun N K L d S η W ω ν E P B f g G=> (∀k,2≤ N k)∧Filter.Tendsto N Filter.atTop Filter.atTop∧((∀k,1≤ K k)∧∀ε:ℝ,0 < ε→ ∀ᶠ k in Filter.atTop,K k≤ N k^ε)∧0 < L∧0 < d∧d < 1∧0 < S∧0 < η∧(fun μ:(k:ℕ)→ Fin (W k)→ MeasureTheory.Measure Ev=> (∃M D:ℕ,∀k,(W k:ℝ)≤ N k^M∧(∀γ,0≤ ω k γ)∧(∑ γ,ω k γ)=1∧(∀γ,MeasureTheory.IsProbabilityMeasure (ν k γ)∧0 < B k γ∧B k γ≤ N k^M∧(B k γ)⁻¹≤ N k^M∧(P k γ).totalDegree≤ 2∧(∀b,|(P k γ).coeff b|≤ N k^M)∧(∃m:ℕ,(m:ℝ)≤ N k^M∧∃(c:Fin m→ ℝ) (i:Fin m→ ℕ) (A:Fin m→ Set (Fin 6→ ℝ)),(∀j,0≤ c j∧c j≤ N k^M∧(i j:ℝ)≤ N k^M∧(fmt 6 (N k^M) D (A j))∧(∀x∈A j,∀b,|x b|≤ N k^M))∧ν k γ=∑ j,(ENNReal.ofReal (c j)) • MeasureTheory.Measure.map (fun x=> (i j,x)) (MeasureTheory.volume.restrict (A j)))∧MeasurableSet (E k γ)∧E k γ ⊆ Set.univ ×ˢ Set.Icc (0:ℝ) 1∧(∀p∈E k γ,(p.1.1:ℝ)≤ N k^M∧∀e,|p.1.2 e|≤ N k^M)∧(∀i,(fmt 7 (N k^M) D ({x₁:Fin 7→ ℝ | ((i,fun j₁:Fin 6=> x₁ j₁.castSucc),x₁ 6)∈(E k γ)})))∧(∀ᵐ l ∂ν k γ,∀t∈Set.Icc (0:ℝ) 1,‖(y l t)‖ +‖(v l)‖≤ K k∧|MvPolynomial.eval (x l t) (P k γ)|≤ K k∧|MvPolynomial.eval (x l t) (MvPolynomial.pderiv (3:Fin 4) (P k γ))|≤ K k*B k γ∧|MvPolynomial.eval (x l t) (MvPolynomial.pderiv (3:Fin 4) (MvPolynomial.pderiv (3:Fin 4) (P k γ)))|≤ K k*(B k γ)^2)∧(∀ᵐ p ∂(μ k γ),B k γ/K k≤ |MvPolynomial.eval (x p.1 p.2) (MvPolynomial.pderiv (3:Fin 4) (P k γ))|))∧ENNReal.ofReal ((K k)⁻¹)≤ ∑ γ,ENNReal.ofReal (ω k γ)*(μ k γ) Set.univ)∧(∀k γ r,0≤ r→ r≤ L→ Measurable (g k γ r)∧MeasureTheory.Measure.map (obs (B k γ) (δ (N k) r)) (μ k γ)=(MeasureTheory.volume.prod MeasureTheory.Measure.count).withDensity (g k γ r))∧(∀k γ u,0 < u→ u≤ η*L→ Measurable (G k γ u)∧MeasureTheory.Measure.map (fun p:Ev=> ((obs (B k γ) (δ (N k) L)) p,fun j:Fin 2=> ⌊(v p.1) j/(δ (N k) u)⌋)) (μ k γ)=((MeasureTheory.volume.prod MeasureTheory.Measure.count).prod MeasureTheory.Measure.count).withDensity (G k γ u))∧(∀r s:ℝ,0≤ r→ r≤ s→ s≤ L→ 0≤ f s - f r∧f s - f r≤ s - r)∧(∀r τ:ℝ,0≤ r→ r≤ L→ 0 < τ→ ∃c:ℝ,0 < c∧∀ᶠ k in Filter.atTop,(∑ γ,ENNReal.ofReal (ω k γ)*(μ k γ) {p | g k γ r ((obs (B k γ) (δ (N k) r)) p) < ENNReal.ofReal (N k^(-f r - τ))∨ENNReal.ofReal (N k^(-f r+τ)) < g k γ r ((obs (B k γ) (δ (N k) r)) p)})≤ ENNReal.ofReal (N k^(-c)))∧(∀r:ℝ,0≤ r→ r≤ L→ f L - f r≤ d*(L - r))∧(∀u τ:ℝ,0 < u→ u≤ η*L→ 0 < τ→ ∃c:ℝ,0 < c∧∀ᶠ k in Filter.atTop,(∑ γ,ENNReal.ofReal (ω k γ)*(μ k γ) {p | ENNReal.ofReal (N k^(-f L - S*u+τ)) < G k γ u ((fun p:Ev=> ((obs (B k γ) (δ (N k) L)) p,fun j:Fin 2=> ⌊(v p.1) j/(δ (N k) u)⌋)) p)})≤ ENNReal.ofReal (N k^(-c)))) (fun k γ=> ((ν k γ).prod MeasureTheory.volume).restrict (E k γ)))
+
+def path : ℝ→ ℝ→ (W:ℕ)→ (Fin W→ ℝ)→ (Fin W→ MeasureTheory.Measure Ln)→ (Fin W→ Set Ev)→ (Fin W→ ℝ)→ (ℝ→ ℝ)→ ℝ→ ℕ→ (ℕ→ ℝ)→ ℝ→ ℕ→ ℕ→ ℝ→ (ℕ→ ℝ)→ (ℕ→ ℕ)→ (ℕ→ ℝ)→ ℝ→ (C:ℕ)→ (Fin C→ ℕ)→ (Fin C→ Fin C)→ (Fin C→ Fin W)→ (Fin C→ ℕ)→ (Fin C→ P2)→ (Fin C→ P2)→ (Fin C→ Matrix (Fin 2) (Fin 2) ℝ)→ (Fin C→ Po)→ (Fin C→ Set Ln)→ (Fin C→ Set Ev)→ (ℕ→ Fin W→ Ob→ Finset (Fin C))→ Prop := (fun Nk L W ω ν E B f κ₁ m s δ₀ Mp Dp σ r T nw κ C lev par γ j c u Q R A F lst=> (1≤ κ)∧(κ≤ Nk^σ)∧((C:ℝ)≤ Nk^Mp)∧(r (m - 1)=L)∧((∀i,i < m→ |r i - s i*L|≤ δ₀*L∧0 < r i∧Nk^((κ₁*s i - δ₀)*L)≤ (2:ℝ)^T i∧(2:ℝ)^T i≤ Nk^((κ₁*s i+δ₀)*L)∧|nw i - (0:ℝ)*s i*L|≤ δ₀*L∧ENNReal.ofReal κ⁻¹≤ ∑ b,if lev b=i then ENNReal.ofReal (ω (γ b))*((ν (γ b)).prod MeasureTheory.volume) (F b) else 0))∧((∀i γ₁ o,((lst i γ₁ o).card:ℝ)≤ κ))∧((∀b b',b≠b'→ lev b=lev b'→ γ b=γ b'→ j b=j b'→ Disjoint (A b) (A b')))∧((∀b,lev b < m∧j b < 2^T (lev b)∧ch (Nk) Mp Dp κ (T (lev b)) (j b:ℝ) (r (lev b)) (B (γ b)) (E (γ b)) (c b) (u b) (Q b) (R b) (A b) (F b) (ENNReal.ofReal (Nk^(-f (r (lev b)))*|Matrix.det (Q b)| /((2:ℝ)^T (lev b)*κ))≤ ((ν (γ b)).prod MeasureTheory.volume) (F b)∧ν (γ b) (A b)≤ ENNReal.ofReal (κ*Nk^(-f (r (lev b)))*|Matrix.det (Q b)|)∧Nk^(-(nw (lev b)+δ₀*L))≤ |Matrix.det (Q b)| *(4:ℝ)^T (lev b)∧|Matrix.det (Q b)| *(4:ℝ)^T (lev b)≤ Nk^(-(nw (lev b) - δ₀*L))∧(∀p∈F b,b∈lst (lev b) (γ b) (obs (B (γ b)) (δ (Nk) (r (lev b))) p))∧(0 < lev b→ lev (par b)+1=lev b∧γ (par b)=γ b∧A b ⊆ A (par b)∧F b ⊆ F (par b)∧(j (par b):ℝ)/(2:ℝ)^T (lev (par b))≤ (j b:ℝ)/(2:ℝ)^T (lev b)∧((j b:ℝ)+1)/(2:ℝ)^T (lev b)≤ ((j (par b):ℝ)+1)/(2:ℝ)^T (lev (par b)))))))
+
+def atlas : ℝ→ ℝ→ (W:ℕ)→ (Fin W→ ℝ)→ (Fin W→ MeasureTheory.Measure Ln)→ (Fin W→ Set Ev)→ (Fin W→ ℝ)→ ℕ→ ℕ→ ℝ→ ℝ→ (T₂:ℕ)→ (Matrix (Fin 2) (Fin 2) ℝ→ Prop)→ (Fin W→Fin (2^T₂)→Set Ln→Set Ev→Prop→Prop)→ENNReal→(Fin W→Set Ev→ENNReal)→Prop := (fun Nk L W ω ν E B Mi Di τ r₂ T₂ extra aux massFloor mass=>∃(C₂:ℕ) (γ₂:Fin C₂→ Fin W) (j₂:Fin C₂→ Fin (2^T₂)) (c₂ u₂:Fin C₂→ P2) (Q₂:Fin C₂→ Matrix (Fin 2) (Fin 2) ℝ) (R₂:Fin C₂→ Po) (A₂:Fin C₂→ Set Ln) (F₂:Fin C₂→ Set Ev) (lst₂:Fin W→ Ob→ Finset (Fin C₂)),(C₂:ℝ)≤ Nk^Mi∧(∀b b',b≠b'→ γ₂ b=γ₂ b'→ j₂ b=j₂ b'→ Disjoint (A₂ b) (A₂ b'))∧(∀γ₁ o,((lst₂ γ₁ o).card:ℝ)≤ Nk^τ)∧(∀b,ch Nk Mi Di (Nk^τ) T₂ ((j₂ b:ℕ):ℝ) r₂ (B (γ₂ b)) (E (γ₂ b)) (c₂ b) (u₂ b) (Q₂ b) (R₂ b) (A₂ b) (F₂ b) (aux (γ₂ b) (j₂ b) (A₂ b) (F₂ b) (∀p∈F₂ b,b∈lst₂ (γ₂ b) (obs (B (γ₂ b)) (δ Nk L) p)))∧extra (Q₂ b))∧massFloor≤ ∑ b,ENNReal.ofReal (ω (γ₂ b))*mass (γ₂ b) (F₂ b))
+
+def sy : ℝ→ ℝ→ (W:ℕ)→ (Fin W→ ℝ)→ (Fin W→ MeasureTheory.Measure Ln)→ (Fin W→ Set Ev)→ (Fin W→ ℝ)→ ℕ→ ℕ→ ℝ→ ℝ→ ℕ→ (Matrix (Fin 2) (Fin 2) ℝ→ Prop)→ Prop := (fun Nk L W ω ν E B Mi Di τ r₂ T₂ extra=>atlas Nk L W ω ν E B Mi Di τ r₂ T₂ extra (fun _ _ _ _ known=>known) (ENNReal.ofReal (Nk^(-τ))) (fun w F=>((ν w).prod MeasureTheory.volume) F))
+
+def wi : ℝ→ ℝ→ (W:ℕ)→ (Fin W→ ℝ)→ (Fin W→ MeasureTheory.Measure Ln)→ (Fin W→ Set Ev)→ (Fin W→ ℝ)→ ℕ→ (ℕ→ ℝ)→ (ℕ→ ℕ)→ (ℕ→ ℝ)→ ℝ→ ℕ→ ℕ→ ℝ→ Prop := (fun Nk L W ω ν E B m r T nw c Mi Di τ=>∃i,i < m∧r i+2*c*L≤ L∧sy Nk L W ω ν E B Mi Di τ (r i) (T i) (fun Q=> |Matrix.det Q| *(4:ℝ)^T i≤ Nk^(-(nw i+c*L))))
+
+def cd : ℕ→ ℕ→ ℕ→ ℝ→ ℝ→ (W:ℕ)→ (Fin W→ MeasureTheory.Measure Ln)→ (Fin W→ ℝ)→ ℕ→ ℝ→ ℝ→ ℝ→ ℝ→ (ℕ→ ℝ)→ (ℕ→ ℕ)→ (C:ℕ)→ (Fin C→ ℕ)→ (Fin C→ Fin W)→ (Fin C→ ℕ)→ (Fin C→ Set Ln)→ (Fin W→ Set Ev)→ Prop := (fun cc J D Nk L W ν B Mc d₁ ρ gain ε r T C lev γ j A H=> (fun (Nk L:ℝ) (W:ℕ) (ν:Fin W→ MeasureTheory.Measure Ln) (B:Fin W→ ℝ) (Mc:ℕ) (d₁ ρ gain ε:ℝ) (r:ℕ→ ℝ) (T:ℕ→ ℕ) (C:ℕ) (lev:Fin C→ ℕ) (γ:Fin C→ Fin W) (j:Fin C→ ℕ) (A:Fin C→ Set Ln) (H:Fin W→ Set Ev)=>∃(b:Fin C) (ag:ℝ),gain≤ ag∧ag≤ 1/8∧r (lev b)+2*ag*L≤ L∧∃(R:Po) (A':Set Ln),R.totalDegree≤ 2∧(∀e,|R.coeff e|≤ Nk^Mc)∧MeasurableSet A'∧A' ⊆ A b∧(∀l∈A',∀t∈Set.Icc ((j b:ℝ)/(2:ℝ)^T (lev b)) (((j b:ℝ)+1)/(2:ℝ)^T (lev b)),|MvPolynomial.eval (xp l t) R|≤ Nk^(ρ*gain*L+ε)*(fun N r:ℝ=> (2:ℝ)^(-(⌊r*Real.log N/Real.log 2⌋:ℤ))) Nk (r (lev b)+ag*L)∧|MvPolynomial.eval (xp l t) (MvPolynomial.pderiv 3 R)|≤ Nk^(ρ*gain*L+ε)*B (γ b)∧|MvPolynomial.eval (xp l t) (MvPolynomial.pderiv 3 (MvPolynomial.pderiv 3 R))|≤ Nk^(ρ*gain*L+ε)*B (γ b)^2/(fun N r:ℝ=> (2:ℝ)^(-(⌊r*Real.log N/Real.log 2⌋:ℤ))) Nk (r (lev b)+ag*L))∧ENNReal.ofReal (Nk^(-((d₁*ag+ρ*gain)*L) - ε)/(2:ℝ)^T (lev b))*ν (γ b) (A b)≤ ((ν (γ b)).prod MeasureTheory.volume) {p | p∈H (γ b)∧p.1∈A'∧p.2∈Set.Icc ((j b:ℝ)/(2:ℝ)^T (lev b)) (((j b:ℝ)+1)/(2:ℝ)^T (lev b))∧B (γ b)/Nk^(ρ*gain*L+ε)≤ |MvPolynomial.eval (xp p.1 p.2) (MvPolynomial.pderiv 3 R)|}) Nk L W ν B Mc d₁ ρ gain ε r T C lev γ j A H∨(fun (cc J D:ℕ) (Nk L:ℝ) (W:ℕ) (ν:Fin W→ MeasureTheory.Measure Ln) (B:Fin W→ ℝ) (Mc:ℕ) (d₁ ρ gain ε:ℝ) (r:ℕ→ ℝ) (T:ℕ→ ℕ) (C:ℕ) (lev:Fin C→ ℕ) (γ:Fin C→ Fin W) (j:Fin C→ ℕ) (A:Fin C→ Set Ln) (H:Fin W→ Set Ev)=>∃(b:Fin C) (ag:ℝ) (Mz MH:ℕ) (A0 Z a0 b0 h0 s0:ℝ) (S0:Po) (f0:P3→ ℝ) (p0:Fin 7→ P3) (E0:Set P3) (c:Fin 3→ ℝ) (M:Matrix (Fin 3) (Fin 3) ℝ) (η:ℝ) (A':Set Ln) (S:Ln→ Set ℝ) (ct:Set Ev),(fun (cc J D:ℕ) (A Z a b h s:ℝ) (S:Po) (f:P3→ ℝ) (p:Fin 7→ P3) (E:Set P3)=> (2≤ A)∧(A^(J+1)≤ Z)∧(0 < b)∧(b≤ a)∧(a≤ 1)∧(0 < h)∧(h*(A^(J+1))^cc≤ b/a)∧(0≤ s)∧(b⁻¹≤ Z)∧(S.totalDegree≤ 2)∧(∀e,|S.coeff e|≤ Z)∧(∀u:P3,∀w:ℝ,|MvPolynomial.eval ![u 0,u 1,u 2,w] (MvPolynomial.pderiv 3 (MvPolynomial.pderiv 3 S))|≤ A/a)∧(ContDiffOn ℝ 6 f (Metric.ball 0 3))∧(|f 0|≤ Z)∧(‖fderiv ℝ f 0‖≤ Z)∧(‖iteratedFDeriv ℝ 2 f 0‖≤ Z)∧(∀(c:ℝ) (L:P3→L[ℝ] ℝ),∃u∈Metric.closedBall (0:P3) 1,s≤ |f u - c - L u|)∧(∀ε:ℝ,s < ε→ ∃(c:ℝ) (L:P3→L[ℝ] ℝ),∀u∈Metric.closedBall (0:P3) 1,|f u - c - L u|≤ ε)∧(∀i,p i 0=1∧‖p i‖≤ A)∧(∀i j k:Fin 7,i≠j→ i≠k→ j≠k→ A⁻¹≤ |Matrix.det (Matrix.of fun r t:Fin 3=> (![p i,p j,p k] r) t)|)∧(MeasurableSet E)∧(E ⊆ Metric.closedBall (0:P3) 1)∧(ENNReal.ofReal A⁻¹≤ MeasureTheory.volume E)∧(exf D f)∧(∀i:Fin 7,exf D (fun v=> iteratedFDeriv ℝ 2 f v (fun _=> p i)))∧(exf D (fun v=> MvPolynomial.eval ![v 0,v 1,v 2,f v] S/a))∧(∀i:Fin 7,exf D (fun v=> iteratedFDeriv ℝ 3 (fun z=> MvPolynomial.eval ![z 0,z 1,z 2,f z] S/a) v (fun _=> p i)))∧(∀i:Fin 7,∀u∈E,|iteratedFDeriv ℝ 2 f u (fun _=> p i)|≤ A*(b+s*h))∧(∀u∈E,|MvPolynomial.eval ![u 0,u 1,u 2,f u] S/a|≤ A)∧(∀i:Fin 7,∀u∈E,|iteratedFDeriv ℝ 3 (fun z=> MvPolynomial.eval ![z 0,z 1,z 2,f z] S/a) u (fun _=> p i)|≤ A*b/a)) cc J D A0 Z a0 b0 h0 s0 S0 f0 p0 E0∧gain≤ ag∧ag≤ 1/8∧r (lev b)+2*ag*L≤ L∧0 < B (γ b)∧0 < η∧η≤ 1∧Mz*cc+2*MH+11≤ Mc∧Z≤ Nk^Mz∧(∀i,|c i|≤ Nk^MH)∧(∀i k,|M i k|≤ Nk^MH)∧|B (γ b)|≤ Nk^MH∧b0=(fun N r:ℝ=> (2:ℝ)^(-(⌊r*Real.log N/Real.log 2⌋:ℤ))) Nk (r (lev b)+ag*L)∧(fun η:ℝ=> (24/η)^2) η*(A0^(J+1))^cc≤ Nk^(ρ*gain*L+ε)∧MeasurableSet A'∧A' ⊆ A b∧(∀l∈A',S l ⊆ Set.Icc (0:ℝ) 1∧ENNReal.ofReal η≤ MeasureTheory.volume (S l))∧(∀l∈A',∀t∈S l,(fun x:Fin 4→ ℝ=> (WithLp.toLp 2 (fun i:Fin 3=> x i.castSucc),x 3)) (cm c M (B (γ b)) (xp l ((j b:ℝ)/(2:ℝ)^T (lev b)+((2:ℝ)^T (lev b))⁻¹*t)))∈((fun (A b:ℝ) (S:Po) (f:P3→ ℝ)=> {z | z.1∈Metric.closedBall 0 1∧|z.2 - f z.1|≤ A*b∧A⁻¹≤ |MvPolynomial.eval ![z.1 0,z.1 1,z.1 2,z.2] (MvPolynomial.pderiv 3 S)|∧|MvPolynomial.eval ![z.1 0,z.1 1,z.1 2,z.2] (MvPolynomial.pderiv 3 S)|≤ A}) A0 b0 S0 f0))∧(ct ⊆ {p | p∈H (γ b)∧p.1∈A'∧p.2∈Set.Icc ((j b:ℝ)/(2:ℝ)^T (lev b)) (((j b:ℝ)+1)/(2:ℝ)^T (lev b))∧(fun x:Fin 4→ ℝ=> (WithLp.toLp 2 (fun i:Fin 3=> x i.castSucc),x 3)) (cm c M (B (γ b)) (xp p.1 p.2))∈((fun (A b:ℝ) (S:Po) (f:P3→ ℝ)=> {z | z.1∈Metric.closedBall 0 1∧|z.2 - f z.1|≤ A*b∧A⁻¹≤ |MvPolynomial.eval ![z.1 0,z.1 1,z.1 2,z.2] (MvPolynomial.pderiv 3 S)|∧|MvPolynomial.eval ![z.1 0,z.1 1,z.1 2,z.2] (MvPolynomial.pderiv 3 S)|≤ A}) A0 b0 S0 f0)})∧ENNReal.ofReal (Nk^(-((d₁*ag+ρ*gain)*L) - ε)/(2:ℝ)^T (lev b))*ν (γ b) (A b)≤ ((ν (γ b)).prod MeasureTheory.volume) ct) cc J D Nk L W ν B Mc d₁ ρ gain ε r T C lev γ j A H)
+
+def ds : ℕ→ ℕ→ ℕ→ ℝ→ ℝ→ ℝ→ ℝ→ ℝ→ ℕ→ (ℕ→ ℝ)→ ℝ→ ℝ→ Prop := (fun cc J D d₁ κ₁ S η ρ m s gain δ₀=>∀N K L d W ω ν E P B f g G,pb N K L d S η W ω ν E P B f g G→ (∀r:ℝ,0≤ r→ r≤ L→ |f r - f 0 - d₁*r|≤ δ₀*L)→ ∀Mp Dp:ℕ,∃Mi Di:ℕ,∀τ:ℝ,0 < τ→ ∃σ:ℝ,0 < σ∧∃k₀:ℕ,∀k,k₀≤ k→ ∀r T nw κ C lev par γ j c u Q R A F lst,path (N k) L (W k) (ω k) (ν k) (E k) (B k) f κ₁ m s δ₀ Mp Dp σ r T nw κ C lev par γ j c u Q R A F lst→ ∀H:Fin (W k)→ Set Ev,(∀w,MeasurableSet (H w)∧H w ⊆ {p |∃b:Fin C,lev b=m - 1∧γ b=w∧p∈F b})→ ENNReal.ofReal (κ⁻¹/2)≤ ∑ w,ENNReal.ofReal (ω k w)*((ν k w).prod MeasureTheory.volume) (H w)→ wi (N k) L (W k) (ω k) (ν k) (E k) (B k) m r T nw gain Mi Di τ∨cd cc J D (N k) L (W k) (ν k) (B k) Mi d₁ ρ gain τ r T C lev γ j A H)
+
+def direct :  ℝ→ ℝ→ (W:ℕ)→ (Fin W→ MeasureTheory.Measure Ln)→ (Fin W→ ℝ)→ ℕ→ ℝ→ ℝ→ ℝ→ ℝ→ (ℕ→ ℝ)→ (ℕ→ ℕ)→ (C:ℕ)→ (Fin C→ ℕ)→ (Fin C→ Fin W)→ (Fin C→ ℕ)→ (Fin C→ Set Ln)→ (Fin W→ Set Ev)→ Prop := (fun (Nk L:ℝ) (W:ℕ) (ν:Fin W→ MeasureTheory.Measure Ln) (B:Fin W→ ℝ) (Mc:ℕ) (d₁ ρ gain ε:ℝ) (r:ℕ→ ℝ) (T:ℕ→ ℕ) (C:ℕ) (lev:Fin C→ ℕ) (γ:Fin C→ Fin W) (j:Fin C→ ℕ) (A:Fin C→ Set Ln) (H:Fin W→ Set Ev)=>∃(b:Fin C) (ag:ℝ),gain≤ ag∧ag≤ 1/8∧r (lev b)+2*ag*L≤ L∧∃(R:Po) (A':Set Ln),R.totalDegree≤ 2∧(∀e,|R.coeff e|≤ Nk^Mc)∧MeasurableSet A'∧A' ⊆ A b∧(∀l∈A',∀t∈Set.Icc ((j b:ℝ)/(2:ℝ)^T (lev b)) (((j b:ℝ)+1)/(2:ℝ)^T (lev b)),|MvPolynomial.eval (xp l t) R|≤ Nk^(ρ*gain*L+ε)*(fun N r:ℝ=> (2:ℝ)^(-(⌊r*Real.log N/Real.log 2⌋:ℤ))) Nk (r (lev b)+ag*L)∧|MvPolynomial.eval (xp l t) (MvPolynomial.pderiv 3 R)|≤ Nk^(ρ*gain*L+ε)*B (γ b)∧|MvPolynomial.eval (xp l t) (MvPolynomial.pderiv 3 (MvPolynomial.pderiv 3 R))|≤ Nk^(ρ*gain*L+ε)*B (γ b)^2/(fun N r:ℝ=> (2:ℝ)^(-(⌊r*Real.log N/Real.log 2⌋:ℤ))) Nk (r (lev b)+ag*L))∧ENNReal.ofReal (Nk^(-((d₁*ag+ρ*gain)*L) - ε)/(2:ℝ)^T (lev b))*ν (γ b) (A b)≤ ((ν (γ b)).prod MeasureTheory.volume) {p | p∈H (γ b)∧p.1∈A'∧p.2∈Set.Icc ((j b:ℝ)/(2:ℝ)^T (lev b)) (((j b:ℝ)+1)/(2:ℝ)^T (lev b))∧B (γ b)/Nk^(ρ*gain*L+ε)≤ |MvPolynomial.eval (xp p.1 p.2) (MvPolynomial.pderiv 3 R)|})
+
+def grid : ℝ → ℝ → ℕ → (ℕ → ℝ) → ℝ → ℝ → ℝ → Prop := (fun κ₁ ρ m s gain δ₀ u0 =>
+      (0 < m ∧ 0 < s 0 ∧ (∀ i, i+1 < m → s i < s (i+1)) ∧ s (m-1)=1) ∧
+      0 < gain ∧ gain ≤ 1/8 ∧ 0 < δ₀ ∧ δ₀ ≤ ρ*gain ∧
+      Even m ∧ 2 ≤ m ∧ (∀ i, s i = ((i:ℝ)+1)/(m:ℝ)) ∧
+      1/(m:ℝ) ≤ gain/κ₁ ∧ δ₀ ≤ gain/100 ∧ δ₀ ≤ u0/100 ∧ δ₀ ≤ ρ*gain/100 ∧
+      0 < u0 ∧ u0 ≤ 4*gain)
+
+def narrow : ℝ → ℝ → (W:ℕ) → (Fin W → ℝ) → (Fin W → MeasureTheory.Measure Ln) →
+      (Fin W→Set Ev)→(Fin W→ℝ)→ℕ→(ℕ→ℝ)→(ℕ→ℝ)→(ℕ→ℕ)→
+      (ℕ→ℝ)→ℝ→ℝ→ℝ→ℕ→ℕ→ℝ→(C:ℕ)→(Fin C→ℕ)→(Fin C→Fin W)→
+      (Fin C→ℕ)→(Fin C→Set Ln)→(Fin C→Set Ev)→(Fin W→Set Ev)→Prop := (fun Nk L W ω ν E B m s r T nw gain u0 κ Mw Dw α C lev γ j A F H =>
+      ∃ (i:ℕ) (β:ℝ), i < m ∧ 1/4 ≤ s i ∧ s i ≤ 1/2 ∧
+      u0 ≤ β ∧ β ≤ 4*gain ∧
+      atlas Nk L W ω ν E B Mw Dw α (r i) (T i)
+        (fun Q=> |Matrix.det Q| *(4:ℝ)^T i≤Nk^(-(nw i+β*L)))
+        (fun w jt At Ft known=>known ∧ ∃b:Fin C,
+          lev b=i ∧ γ b=w ∧ j b=(jt:ℕ) ∧ At⊆A b ∧ Ft⊆F b)
+        (ENNReal.ofReal (κ⁻¹/8))
+        (fun w F=>((ν w).prod MeasureTheory.volume) (F∩H w)))
+
+def weakds : ℕ→ ℕ→ ℕ→ ℝ→ ℝ→ ℝ→ ℝ→ ℝ→ ℕ→ (ℕ→ ℝ)→ ℝ→ ℝ→ ℝ→Prop := (fun cc J D d₁ κ₁ S η ρ m s gain δ₀ u0=>∀N K L d W ω ν E P B f g G,pb N K L d S η W ω ν E P B f g G→ (∀r:ℝ,0≤ r→ r≤ L→ |f r - f 0 - d₁*r|≤ δ₀*L)→ ∀Mp Dp:ℕ,∃M₀ D₀:ℕ,∀Mi Di:ℕ,M₀≤Mi→D₀≤Di→∀τ:ℝ,0 < τ→∀α:ℝ,0<α→α≤1→ ∃σ:ℝ,0 < σ∧∃k₀:ℕ,∀k,k₀≤ k→ ∀r T nw κ C lev par γ j c u Q R A F lst,path (N k) L (W k) (ω k) (ν k) (E k) (B k) f κ₁ m s δ₀ Mp Dp σ r T nw κ C lev par γ j c u Q R A F lst→ ∀H:Fin (W k)→ Set Ev,(∀w,MeasurableSet (H w)∧H w ⊆ {p |∃b:Fin C,lev b=m - 1∧γ b=w∧p∈F b})→ ENNReal.ofReal (κ⁻¹/2)≤ ∑ w,ENNReal.ofReal (ω k w)*((ν k w).prod MeasureTheory.volume) (H w)→ (wi (N k) L (W k) (ω k) (ν k) (E k) (B k) m r T nw gain Mi Di τ∨cd cc J D (N k) L (W k) (ν k) (B k) Mi d₁ ρ gain τ r T C lev γ j A H)∨narrow (N k) L (W k) (ω k) (ν k) (E k) (B k) m s r T nw gain u0 κ M₀ D₀ α C lev γ j A F H)
+
+def repairds :  ℝ→ ℝ→ ℝ→ ℝ→ ℝ→ ℕ→ (ℕ→ ℝ)→ ℝ→ ℝ→ ℝ→Prop := (fun d₁ κ₁ S η ρ m s gain δ₀ u0=>∀N K L d W ω ν E P B f g G,pb N K L d S η W ω ν E P B f g G→ (∀r:ℝ,0≤ r→ r≤ L→ |f r - f 0 - d₁*r|≤ δ₀*L)→ ∀Mp Dp Mw Dw:ℕ,∃M₀ D₀:ℕ,∀Mi Di:ℕ,M₀≤Mi→D₀≤Di→∀τ:ℝ,0 < τ→ ∃α:ℝ,0<α∧α≤1∧∃σ:ℝ,0 < σ∧∃k₀:ℕ,∀k,k₀≤ k→ ∀r T nw κ C lev par γ j c u Q R A F lst,path (N k) L (W k) (ω k) (ν k) (E k) (B k) f κ₁ m s δ₀ Mp Dp σ r T nw κ C lev par γ j c u Q R A F lst→ ∀H:Fin (W k)→ Set Ev,(∀w,MeasurableSet (H w)∧H w ⊆ {p |∃b:Fin C,lev b=m - 1∧γ b=w∧p∈F b})→ ENNReal.ofReal (κ⁻¹/2)≤ ∑ w,ENNReal.ofReal (ω k w)*((ν k w).prod MeasureTheory.volume) (H w)→ narrow (N k) L (W k) (ω k) (ν k) (E k) (B k) m s r T nw gain u0 κ Mw Dw α C lev γ j A F H→wi (N k) L (W k) (ω k) (ν k) (E k) (B k) m r T nw gain Mi Di τ∨direct (N k) L (W k) (ν k) (B k) Mi d₁ ρ gain τ r T C lev γ j A H)
+
+def MainAssertion : Prop := mk→ ∀cc:ℕ,1≤ cc→ ∀d₁ κ₁ S η ρ:ℝ,0≤ d₁→ d₁ < 1→ 0 < κ₁→ κ₁≤ 1→ 0 < S→ 0 < η→ 0 < ρ→ d₁+ρ < 1→ ∃D:ℕ,∀J:ℕ,1≤ J→ (fun (D J:ℕ)=>∀(A:ℝ),2≤ A→ ∀(f:P3→ ℝ),exf D f→ (∀(E:Set P3) (v:ℝ),MeasurableSet E→ E ⊆ Metric.closedBall (0:P3) 1→ ENNReal.ofReal A⁻¹≤ MeasureTheory.volume E→ 0≤ v→ (∀x∈E,|f x|≤ v)→ ∀j:ℕ,j≤ 6→ ∀x∈Metric.closedBall (0:P3) 2,‖iteratedFDeriv ℝ j f x‖≤ A^J*v)∧(∀(c:ℝ) (L:P3→L[ℝ] ℝ) (ε:ℝ),0 < ε→ (∀x∈Metric.closedBall (0:P3) 1,|f x - c - L x|≤ ε)→ ∀j:ℕ,2≤ j→ j≤ 6→ ∀x∈Metric.closedBall (0:P3) 2,‖iteratedFDeriv ℝ j f x‖≤ A^J*ε)) D J→ ∃(m:ℕ) (s:ℕ→ ℝ) (gain δ₀:ℝ),(0 < m∧0 < s 0∧(∀i,i+1 < m→ s i < s (i+1))∧s (m - 1)=1)∧0 < gain∧gain≤ 1/8∧0 < δ₀∧δ₀≤ ρ*gain∧ds cc J D d₁ κ₁ S η ρ m s gain δ₀
+
+/-- Keep the original x0708 interface name for the same frozen assertion. -/
+abbrev Statement : Prop := MainAssertion
+
+def WeakAssertion : Prop := mk→ ∀cc:ℕ,1≤ cc→ ∀d₁ κ₁ S η ρ:ℝ,0≤ d₁→ d₁ < 1→ 0 < κ₁→ κ₁≤ 1→ 0 < S→ 0 < η→ 0 < ρ→ d₁+ρ < 1→∀e0:ℝ,0<e0→∃D:ℕ,∀J:ℕ,1≤ J→ (fun (D J:ℕ)=>∀(A:ℝ),2≤ A→ ∀(f:P3→ ℝ),exf D f→ (∀(E:Set P3) (v:ℝ),MeasurableSet E→ E ⊆ Metric.closedBall (0:P3) 1→ ENNReal.ofReal A⁻¹≤ MeasureTheory.volume E→ 0≤ v→ (∀x∈E,|f x|≤ v)→ ∀j:ℕ,j≤ 6→ ∀x∈Metric.closedBall (0:P3) 2,‖iteratedFDeriv ℝ j f x‖≤ A^J*v)∧(∀(c:ℝ) (L:P3→L[ℝ] ℝ) (ε:ℝ),0 < ε→ (∀x∈Metric.closedBall (0:P3) 1,|f x - c - L x|≤ ε)→ ∀j:ℕ,2≤ j→ j≤ 6→ ∀x∈Metric.closedBall (0:P3) 2,‖iteratedFDeriv ℝ j f x‖≤ A^J*ε)) D J→ ∃(m:ℕ) (s:ℕ→ℝ) (gain δ₀ u0:ℝ),grid κ₁ ρ m s gain δ₀ u0 ∧ gain≤e0 ∧ weakds cc J D d₁ κ₁ S η ρ m s gain δ₀ u0
+
+def RepairAssertion : Prop := mk→∀d₁ κ₁ S η ρ:ℝ,0≤ d₁→ d₁ < 1→ 0 < κ₁→ κ₁≤ 1→ 0 < S→ 0 < η→ 0 < ρ→ d₁+ρ < 1→∃e0:ℝ,0<e0 ∧ e0≤1/8 ∧ ∀(m:ℕ) (s:ℕ→ℝ) (gain δ₀ u0:ℝ),grid κ₁ ρ m s gain δ₀ u0 → gain≤e0 → repairds d₁ κ₁ S η ρ m s gain δ₀ u0
+
+end
+
+end Submission.Obl.k4_physical_parent_potential_candidates

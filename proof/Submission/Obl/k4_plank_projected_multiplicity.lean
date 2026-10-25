@@ -1,0 +1,9 @@
+import Submission.Obl.k4_plank_projected_multiplicity.DyadicMultiplicity
+
+theorem Submission.k4_plank_projected_multiplicity : (∀ ε : ℝ, 0 < ε → ∃ η : ℝ, 0 < η ∧ ∃ C : ℝ, 0 < C ∧ ∀ (D : ℕ), 1 ≤ D → ∀ (n : ℕ) (b u : Fin n → EuclideanSpace ℝ (Fin 2)) (ω : Fin n → ℝ) (A : ℝ) (J : Fin n → Finset (Fin D)), (∀ i : Fin n, ‖b i‖ ≤ 1 ∧ ‖u i‖ ≤ 1) → (∀ i : Fin n, 0 < ω i) → 0 < A → (∀ (c w e₁ e₂ : EuclideanSpace ℝ (Fin 2)) (a β : ℝ), ‖e₁‖ = 1 → ‖e₂‖ = 1 → inner ℝ e₁ e₂ = 0 → 1 ≤ a → a ≤ β → β ≤ (D : ℝ) → ∀ S : Finset (Fin n), (∀ i ∈ S, ∀ t ∈ Set.Icc (0 : ℝ) 1, |inner ℝ (b i + t • u i - c - t • w) e₁| ≤ a / (D : ℝ) ∧ |inner ℝ (b i + t • u i - c - t • w) e₂| ≤ β / (D : ℝ)) → ∑ i ∈ S, ω i ≤ A * a * β) → (∀ i : Fin n, (D : ℝ) ^ (1 - η) ≤ ((J i).card : ℝ)) → ∑ i : Fin n, ω i * ((J i).card : ℝ) ≤ C * A * (D : ℝ) ^ ε * ((((Finset.univ : Finset (Fin n)).sigma J).image (fun p => ((p.2 : ℕ), fun k : Fin 2 => ⌊(D : ℝ) * (b p.1 + (((((p.2 : ℕ) : ℝ) + 1 / 2) / (D : ℝ)) • u p.1)) k⌋))).card : ℝ)) → (∀ c R α : ℝ, 0 < c → 1 ≤ R → 0 < α → ∃ θ : ℝ, 0 < θ ∧ ∃ k₀ : ℕ, ∀ k : ℕ, k₀ ≤ k → ∀ (n : ℕ) (x v : Fin n → EuclideanSpace ℝ (Fin 4)), c * (2 : ℝ) ^ (3 * k) / ((k : ℝ) + 1) ^ 2 ≤ (n : ℝ) → (∀ i : Fin n, x i 0 = 0 ∧ v i 0 = 1 ∧ ‖v i‖ ≤ 2) → (∀ i j : Fin n, i ≠ j → (2 : ℝ) ^ (-(k : ℤ)) ≤ ‖v i - v j‖) → (∀ i : Fin n, ‖x i‖ ≤ R) → ∑ i : Fin n, MeasureTheory.volume {t : ℝ | t ∈ Set.Icc (0 : ℝ) 1 ∧ (2 : ℝ) ^ ((1 + α) * (k : ℝ)) ≤ (((Finset.univ : Finset (Fin n)).filter (fun j => |(x j 1 + t * v j 1) - (x i 1 + t * v i 1)| ≤ (2 : ℝ) ^ (-(k : ℤ)) ∧ |(x j 2 + t * v j 2) - (x i 2 + t * v i 2)| ≤ (2 : ℝ) ^ (-(k : ℤ)))).card : ℝ)} ≤ ENNReal.ofReal ((n : ℝ) * (2 : ℝ) ^ (-(θ * (k : ℝ))))) := by
+  intro hplank c R α _hc hR hα
+  obtain ⟨θ, hθ, k₀, htail⟩ :=
+    Submission.Obl.k4_plank_projected_multiplicity.dyadic_projected_multiplicity_tail hplank hR hα
+  refine ⟨θ, hθ, k₀, ?_⟩
+  intro k hk n x v _hn hv hsep hx
+  exact htail k hk n x v (fun i => (hv i).2) hsep hx
