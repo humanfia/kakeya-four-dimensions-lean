@@ -1,0 +1,20 @@
+{
+ "package": "WangZahlLot",
+ "schema": "wzlot/1",
+ "upstream": "humanfia LOT tree g-wang_zahl_kakeya_dimH (our own; proved 2026-10-13, Lean-Eval #2121 accepted)",
+ "revision": "da2150fe199fef56c1db282e4355ba62d57ff8b4",
+ "source": "tree.git of /home/ubuntu/lean-runs/lean-gap/lot/g-wang_zahl_kakeya_dimH (read-only git archive)",
+ "scope": "root closure of Submission.Obl.Root (2,874 modules) + the problem file ChallengeDeps.lean",
+ "changes": [
+  "modules Submission.* -> WangZahlLot.* (files Submission/** -> WangZahlLot/**)",
+  "every token `Submission` -> `WangZahlLot` (namespaces, declaration names, references, docs)",
+  "ChallengeDeps.lean (lean-eval problem wang_zahl_kakeya_dimH) -> WangZahlLot/ChallengeDeps.lean; its declarations keep LeanEval.Analysis.WangZahlKakeya.*; its header keeps `import Mathlib` and drops the lean-eval template's `import Lake.Toml`, `import Lake.Util.Message`, `import Lean` (nothing in the library uses them; the from-scratch build checks it; --keep-toolchain-imports keeps them)",
+  "nothing else: no proof, statement or option changed"
+ ],
+ "files": 2875,
+ "modules": 2875,
+ "lines": 365163,
+ "renamed_tokens": 15612,
+ "renamed_imports": 206,
+ "license": "ours (humanfia); ChallengeDeps.lean is the lean-eval problem file (see NOTICE)"
+}

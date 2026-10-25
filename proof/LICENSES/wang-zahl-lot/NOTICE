@@ -1,0 +1,17 @@
+WangZahlLot (wzlib)
+===================
+
+This package is the live library of our own LOT proof tree g-wang_zahl_kakeya_dimH
+(humanfia; proved 2026-10-13, root lib commit da2150fe199fef56c1db282e4355ba62d57ff8b4,
+accepted on Lean-Eval as submission #2121): the 2,874 modules of the root's import closure
+and the problem file, with one mechanical change -- the namespace and module root
+`Submission` is renamed `WangZahlLot` (see WZLOT.json; WZLOT-FILES.json lists every file with
+its sha256 before and after).
+
+WangZahlLot/ChallengeDeps.lean is the problem file of the Lean-Eval problem
+wang_zahl_kakeya_dimH (leanprover/lean-eval 38361be884302c7edce1908c4aef8296eb2cb27e, via
+ZhengyangZhang06/lean-gap d04dcc4), unchanged but for its module path.
+
+Mathematics: H. Wang and J. Zahl, "Volume estimates for unions of convex sets, and the Kakeya
+set conjecture in three dimensions" (arXiv:2502.17655) and "Sticky Kakeya sets and the sticky
+Kakeya conjecture" (arXiv:2210.09581), with the classical inputs those papers cite.
