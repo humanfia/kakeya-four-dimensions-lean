@@ -1,0 +1,9 @@
+import Submission.Obl.k4_compatible_pair_frame_preparation.Construction.SpineInterface
+import Submission.Obl.k4_paired_test_normalization.TestedSample
+
+namespace Submission.Obl.k4_compatible_pair_frame_preparation.Construction
+
+noncomputable abbrev TestedSample := Submission.Obl.k4_paired_test_normalization.NormalizationStep.TestedSample
+noncomputable abbrev TestedAt := Submission.Obl.k4_paired_test_normalization.NormalizationStep.TestedAt
+
+end Submission.Obl.k4_compatible_pair_frame_preparation.Construction
