@@ -1,0 +1,71 @@
+-- Ported from this LOT tree: o294 k4_physical_row_packet_source (sessions x1082, x1088, x1095, x1096 and others), module Submission.Obl.k4_physical_row_packet_source.Parent.ParentSource.Native.UniformBoundsPreparation, prefix renamed to Submission.Obl.k4_isotropic_path_improvement.S294 (x1078).
+-- Ported from this LOT tree (oai_074): obligation o287 k4_physical_parent_potential_source,
+-- file Submission/Obl/k4_physical_parent_potential_source/ParentSource/Native/UniformBoundsPreparation.lean on the union of branches x1035 7054b970, x1065 bf5af759, x1066 90ebad49, x1037 47d17da5
+-- (x1082, 2026-10-22); namespace Submission.Obl.k4_physical_parent_potential_source renamed to Submission.Obl.k4_isotropic_path_improvement.S294.Parent. Per-file credits below are the original authors'.
+/- Adapted from this LOT tree, o265, session x0943, commit 2677a0404c1ed53d6c31d9fee7cfe07a1745d292,
+Submission/Obl/k4_staged_weak_breadth_discovery/Native/UniformBoundsPreparation.lean.
+All earlier source attributions below are retained. -/
+import Submission.Obl.k4_isotropic_path_improvement.S294.Parent.ParentSource.Native.UniformPurePreparation
+import Submission.Obl.k4_isotropic_path_improvement.S294.Parent.ParentSource.Native.PureBoundsGrid
+
+namespace Submission.Obl.k4_isotropic_path_improvement.S294.Parent.ParentSource.Native
+
+open MeasureTheory Set Filter
+open scoped ENNReal BigOperators
+
+/-- Both original density bounds survive on any later original submeasure.
+The actual depth may be selected after the original path has arrived. -/
+def PreparedAngularPath.uniformPureBounds {T : Type*} {d : ProblemData} {k : ℕ}
+    {p : PathData (d.W k)} {m : ℕ}
+    {H : Fin (d.W k) → Set ((ℕ × (Fin 6 → ℝ)) × ℝ)} {u : T → ℝ} {τ : ℝ}
+    (Q : PreparedAngularPath d k p m H u τ) (ε : ℝ) : Prop :=
+  ∀ w (ρ : Measure ((ℕ × (Fin 6 → ℝ)) × ℝ)), ρ ≤ d.μ k w →
+    (∀ᵐ q ∂ρ, q ∈ Q.base w) → ∀ r : ℝ, 0 ≤ r → r ≤ d.L →
+    ∀ᵐ q ∂ρ,
+      ENNReal.ofReal (d.N k ^ (-d.f r - τ - ε)) ≤
+        d.g k w r (obs (d.B k w) (δ (d.N k) r) q) ∧
+      d.g k w r (obs (d.B k w) (δ (d.N k) r) q) ≤
+        ENNReal.ofReal (d.N k ^ (-d.f r + τ + ε))
+
+theorem PreparedAngularPath.uniformPureBounds.ceiling
+    {T : Type*} {d : ProblemData} {k : ℕ} {p : PathData (d.W k)} {m : ℕ}
+    {H : Fin (d.W k) → Set ((ℕ × (Fin 6 → ℝ)) × ℝ)} {u : T → ℝ} {τ ε : ℝ}
+    {Q : PreparedAngularPath d k p m H u τ} (h : Q.uniformPureBounds ε) :
+    Q.uniformPureCeiling ε := by
+  intro w ρ hρ hbase r hr hrL
+  exact (h w ρ hρ hbase r hr hrL).mono fun _ hq => hq.2
+
+/-- The same original buffer and angular masks can carry both sides of
+the pure-density band at all actual depths. -/
+theorem ProblemData.Valid.prepare_native_angular_path_uniform_bounds {T : Type*} [Fintype T]
+    {d : ProblemData} (hd : d.Valid) (κ₁ : ℝ) (m : ℕ) (hm : 0 < m)
+    (s : ℕ → ℝ) (δ₀ : ℝ) (Mp Dp : ℕ) (u : T → ℝ)
+    (hu : ∀ t, 0 < u t ∧ u t ≤ d.η * d.L)
+    (τ ε : ℝ) (hτ : 0 < τ) (hε : 0 < ε) :
+    ∃ σ : ℝ, 0 < σ ∧ ∀ᶠ k in atTop, ∀ p : PathData (d.W k),
+      p.Valid (d.N k) d.L (d.ω k) (d.ν k) (d.E k) (d.B k) d.f κ₁ m s δ₀ Mp Dp σ →
+      ∀ H : Fin (d.W k) → Set ((ℕ × (Fin 6 → ℝ)) × ℝ),
+      (∀ w, MeasurableSet (H w)) →
+      (∀ w, H w ⊆ {q | ∃ b, p.lev b = m - 1 ∧ p.γ b = w ∧ q ∈ p.F b}) →
+      ENNReal.ofReal (p.κ⁻¹ / 2) ≤
+        ∑ w, ENNReal.ofReal (d.ω k w) * ((d.ν k w).prod volume) (H w) →
+      ∃ Q : PreparedAngularPath d k p m H u τ,
+        ENNReal.ofReal (11 * p.κ⁻¹ / 32) ≤
+          ∑ w, ENNReal.ofReal (d.ω k w) * ((d.ν k w).prod volume) (Q.residual w) ∧
+        Q.uniformPureBounds ε := by
+  obtain ⟨n, hn, depths, hdepth, hlower, hupper⟩ :=
+    exists_fixed_two_sided_depth_grid hd.2.2.2.1 hε
+  obtain ⟨σ, hσ, hprep⟩ := hd.prepare_native_angular_path_buffered_pure_tests
+    κ₁ m hm s δ₀ Mp Dp depths hdepth u hu τ hτ
+  refine ⟨σ, hσ, hprep.mono ?_⟩
+  intro k hk p hp H hH hcover hmass
+  obtain ⟨Q, htests, hmassQ⟩ := hk p hp H hH hcover hmass
+  refine ⟨Q, hmassQ, ?_⟩
+  intro w ρ hρ hbase r hr hrL
+  have hfloor := hd.pure_floor_of_upper_tests k w ρ hρ depths hdepth τ ε
+    (fun i => hbase.mono fun q hq => (htests w q hq i).1) hupper hr hrL
+  have hceiling := hd.pure_ceiling_of_lower_tests k w ρ hρ depths hdepth τ ε
+    (fun i => hbase.mono fun q hq => (htests w q hq i).2) hlower hr hrL
+  exact hfloor.and hceiling
+
+end Submission.Obl.k4_isotropic_path_improvement.S294.Parent.ParentSource.Native

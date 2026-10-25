@@ -1,0 +1,80 @@
+-- Part of an offer for o106 assembled by x0678 (o064). Adapted from this LOT tree, o064's
+-- repository, origin/x0447 at f61522e4 (x0447's file Submission/Obl/k4_terminal_charts_from_scalar_mesh_row_fit/RawRestoration/NormalizedCandidate.lean);
+-- only the namespace changed. See that file for the sources it in turn adapts.
+-- Adapted from this LOT tree o143/x0542, commit f027eb90,
+-- Submission/Obl/k4_isotropic_discovery_of_local_restoration/NormalizedCandidate.lean.
+import Submission.Obl.k4_isotropic_path_improvement.Repair.RawRestoration.PacketCandidate
+
+/-! A precise interface between geometric branch extraction and restoration. -/
+
+namespace Submission.Obl.k4_isotropic_path_improvement.Repair.RawRestoration
+
+noncomputable section
+
+open MvPolynomial MeasureTheory
+
+/-- A normalized branch certificate. It contains no new test polynomial: the
+local restoration hypothesis supplies that polynomial only after this
+certificate is produced. All incidence masses use the original prior. -/
+def normalizedCandidate (Cloc : ℕ) (Nk L : ℝ) (W : ℕ)
+    (ν : Fin W → Measure Line) (B : Fin W → ℝ)
+    (Mc : ℕ) (d₁ ρ gain ε : ℝ) (r : ℕ → ℝ) (T : ℕ → ℕ)
+    (C : ℕ) (lev : Fin C → ℕ) (γ : Fin C → Fin W) (j : Fin C → ℕ)
+    (A : Fin C → Set Line) (H : Fin W → Set Event) : Prop :=
+  ∃ (b : Fin C) (actualGain : ℝ) (Mz MH : ℕ) (D : LocalBranchData Cloc)
+    (c : Fin 3 → ℝ) (M : Matrix (Fin 3) (Fin 3) ℝ)
+    (η : ℝ) (A' : Set Line) (S : Line → Set ℝ) (counted : Set Event),
+    gain ≤ actualGain ∧ actualGain ≤ 1 / 8 ∧
+    r (lev b) + 2 * actualGain * L ≤ L ∧
+    0 < B (γ b) ∧ 0 < η ∧ η ≤ 1 ∧
+    Mz * Cloc + 2 * MH + 11 ≤ Mc ∧
+    D.Z ≤ Nk ^ Mz ∧ (∀ i, |c i| ≤ Nk ^ MH) ∧
+    (∀ i k, |M i k| ≤ Nk ^ MH) ∧ |B (γ b)| ≤ Nk ^ MH ∧
+    D.b = dyadicThickness Nk (r (lev b) + actualGain * L) ∧
+    restorationRemezFactor η * D.A ^ Cloc ≤ Nk ^ (ρ * gain * L + ε) ∧
+    MeasurableSet A' ∧ A' ⊆ A b ∧
+    (∀ l ∈ A', S l ⊆ Set.Icc (0 : ℝ) 1 ∧ ENNReal.ofReal η ≤ volume (S l)) ∧
+    (∀ l ∈ A', ∀ t ∈ S l,
+      pointOfCoordinates (coordinateMap c M (B (γ b))
+        (graphPoint l ((j b : ℝ) / (2 : ℝ) ^ T (lev b) +
+          ((2 : ℝ) ^ T (lev b))⁻¹ * t))) ∈ D.region) ∧
+    (counted ⊆ {p | p ∈ H (γ b) ∧ p.1 ∈ A' ∧
+      p.2 ∈ Set.Icc ((j b : ℝ) / (2 : ℝ) ^ T (lev b))
+        (((j b : ℝ) + 1) / (2 : ℝ) ^ T (lev b)) ∧
+      pointOfCoordinates (coordinateMap c M (B (γ b)) (graphPoint p.1 p.2)) ∈ D.region}) ∧
+    ENNReal.ofReal (Nk ^ (-((d₁ * actualGain + ρ * gain) * L) - ε) /
+        (2 : ℝ) ^ T (lev b)) * ν (γ b) (A b) ≤ ((ν (γ b)).prod volume) counted
+
+/-- The restoration output and all whole-block bookkeeping have been discharged. -/
+theorem normalizedCandidate_implies_candidate
+    (Cloc : ℕ) (hr : ∀ D : LocalBranchData Cloc, ∃ Q, D.restored Q)
+    (Nk L : ℝ) (W : ℕ) (ν : Fin W → Measure Line) (B : Fin W → ℝ)
+    (Mc : ℕ) (d₁ ρ gain ε : ℝ) (r : ℕ → ℝ) (T : ℕ → ℕ)
+    (C : ℕ) (lev : Fin C → ℕ) (γ : Fin C → Fin W) (j : Fin C → ℕ)
+    (A : Fin C → Set Line) (H : Fin W → Set Event) (hN : 2 ≤ Nk)
+    (h : normalizedCandidate Cloc Nk L W ν B Mc d₁ ρ gain ε r T C lev γ j A H) :
+    residualCandidate Nk L W ν B Mc d₁ ρ gain ε r T C lev γ j A H := by
+  obtain ⟨b, actualGain, Mz, MH, D, c, M, η, A', S, counted,
+    hgain, hgain8, hdepth, hB, hη, hη1, hformat, hZ, hc, hM, hBsize,
+    hthickness, hbudget, hA'meas, hA'sub, hSwit, hwitness, hcounted, hmass⟩ := h
+  exact residualCandidate_of_normalized_branch Nk L W ν B Mc d₁ ρ gain ε r T
+    C lev γ j A H b actualGain hgain hgain8 hdepth Cloc Mz MH D (hr D)
+    c M η A' S counted hN hB hη hη1 hformat hZ hc hM hBsize hthickness hbudget
+    hA'meas hA'sub hSwit hwitness hcounted hmass
+
+/-- The local assertion chooses one exponent which then works for every
+normalized packet certificate, regardless of the source's Boolean format. -/
+theorem local_restoration_supplies_candidate_conversion (h : LocalRestorationAssertion) :
+    ∃ Cloc : ℕ, 1 ≤ Cloc ∧
+      ∀ (Nk L : ℝ) (W : ℕ) (ν : Fin W → Measure Line) (B : Fin W → ℝ)
+        (Mc : ℕ) (d₁ ρ gain ε : ℝ) (r : ℕ → ℝ) (T : ℕ → ℕ)
+        (C : ℕ) (lev : Fin C → ℕ) (γ : Fin C → Fin W) (j : Fin C → ℕ)
+        (A : Fin C → Set Line) (H : Fin W → Set Event), 2 ≤ Nk →
+        normalizedCandidate Cloc Nk L W ν B Mc d₁ ρ gain ε r T C lev γ j A H →
+        residualCandidate Nk L W ν B Mc d₁ ρ gain ε r T C lev γ j A H := by
+  obtain ⟨Cloc, hCloc, hr⟩ := apply_local_restoration h
+  exact ⟨Cloc, hCloc, normalizedCandidate_implies_candidate Cloc hr⟩
+
+end
+
+end Submission.Obl.k4_isotropic_path_improvement.Repair.RawRestoration
