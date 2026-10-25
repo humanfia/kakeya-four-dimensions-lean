@@ -1,0 +1,156 @@
+import Mathlib
+
+/-! Adapted from this LOT tree, obligation o245, session x0852,
+branch x0852 at d910a82958751d2c7c7da2ba0a4c7ac7b29f42f6,
+file `Submission/Obl/k4_horizontal_interior_parameter_bootstrap/Interface.lean`.
+The namespace and internal imports are changed to o272; source provenance is retained below. -/
+
+/-!
+# Interface for the interior parameter bootstrap (o245)
+
+Adapted from LOT tree oai_074_kakeya_four_dimensions, obligation o217
+(`k4_horizontal_endpoint_parameter_bootstrap`), branch `x0763`, commit `c8abf6e1`,
+file `Submission/Obl/k4_horizontal_endpoint_parameter_bootstrap/Interface.lean`
+(session x0763, written for this tree); the frozen engine `RateEngine` and the premises
+`ScalarInput`, `RowInput`, `MatchingInput` are adapted from the same obligation, branch
+`x0759`, file `Interfaces.lean` (session x0759). Namespace changed to o245's.
+
+`LayersAt N d e₀ u sMax ρ π b` is the frozen full-time layer conclusion with parameter
+width `D = N^(-u*s)`, without the polynomial coefficient budget `|h_e| ≤ N^R` (recovered
+from the whole-square bounds, see `CoefR.lean`). `EngineAt d κ ℓ S U e₀ u sMax` is
+`LayersAt` for EVERY prepared horizontal input with the same structural constants.
+
+`Hyp1`..`Hyp4` are the four hypothesis blocks of the frozen statement, with its local
+functions `x, I, z, fit` replaced by `xs b, Iv, zc b, fitP b` (definitionally equal after
+beta reduction). `RateEngine fixedBuffer rates` is the frozen engine lambda itself, so the
+frozen theorem is `ScalarInput → RowInput → MatchingInput → RateEngine true (u = 1) →
+RateEngine false (2κ < u ≤ 1)` up to beta reduction.
+-/
+
+set_option linter.unusedVariables false
+
+open MeasureTheory Filter
+
+noncomputable section
+
+namespace Submission.Obl.k4_horizontal_strict_parameter_step
+
+/-- The trajectory `x_l(t) = (t, b₀ + t b₃, b₁ + t b₄, b₂ + t b₅)` at sample `k`. -/
+def xs {α : Type} (b : ℕ → α → Fin 6 → ℝ) (k : ℕ) (l : α) (t : ℝ) : Fin 4 → ℝ :=
+  ![t, b k l 0 + t * b k l 3, b k l 1 + t * b k l 4, b k l 2 + t * b k l 5]
+
+/-- The dyadic time block `j` of generation `T`. -/
+def Iv (T : ℕ) (j : Fin (2 ^ T)) : Set ℝ :=
+  Set.Icc (((j : ℕ) : ℝ) / (2 : ℝ) ^ T) ((((j : ℕ) : ℝ) + 1) / (2 : ℝ) ^ T)
+
+/-- The base cell `(t, x₁, x₂)` at side `Nk^(-r)`. -/
+def zc {α : Type} (b : ℕ → α → Fin 6 → ℝ) (k : ℕ) (Nk r : ℝ) (p : α × ℝ) (e : Fin 3) : ℤ :=
+  ⌊(![p.2, (xs b k p.1 p.2) 1, (xs b k p.1 p.2) 2] : Fin 3 → ℝ) e / (Nk ^ (-r))⌋
+
+/-- A fitted polynomial `Q` with height `H` and thickness `a` along `l` on `I`. -/
+def fitP {α : Type} (b : ℕ → α → Fin 6 → ℝ) (k : ℕ) (H a : ℝ) (Q : MvPolynomial (Fin 4) ℝ)
+    (l : α) (I : Set ℝ) : Prop :=
+  ∀ t ∈ I, |MvPolynomial.eval (xs b k l t) Q| ≤ H * a ∧
+    |MvPolynomial.eval (xs b k l t) (MvPolynomial.pderiv (3 : Fin 4) Q)| ≤ H ∧
+    |MvPolynomial.eval (xs b k l t) (MvPolynomial.pderiv (3 : Fin 4)
+      (MvPolynomial.pderiv (3 : Fin 4) Q))| ≤ H / a
+
+/-- Hypothesis block 1: the per-sample structure of the prepared data. -/
+def Hyp1 (K : ℕ → ℝ) {α : Type} [MeasurableSpace α] (ν : ℕ → Measure α)
+    (μ ρ : ℕ → Measure (α × ℝ)) (π : ℕ → Measure ℝ) (b : ℕ → α → Fin 6 → ℝ)
+    (P : ℕ → MvPolynomial (Fin 4) ℝ) : Prop :=
+  ∀ k, Measurable (b k) ∧ MeasureTheory.IsProbabilityMeasure (ν k) ∧ MeasureTheory.IsProbabilityMeasure (π k) ∧ μ k ≤ ENNReal.ofReal (K k) • ((ν k).prod MeasureTheory.volume) ∧ ρ k ≤ μ k ∧ μ k (Set.univ ×ˢ Set.Icc (0 : ℝ) 1)ᶜ = 0 ∧ ENNReal.ofReal ((K k)⁻¹) ≤ ρ k Set.univ ∧ (P k).totalDegree ≤ 2 ∧ (∀ᵐ l ∂ν k, |b k l 0| + |b k l 1| + |b k l 3| + |b k l 4| ≤ K k) ∧ (∀ᵐ p ∂μ k, (∀ t ∈ Set.Icc (0 : ℝ) 1, |MvPolynomial.eval (xs b k p.1 t) (P k)| ≤ K k ∧ |MvPolynomial.eval (xs b k p.1 t) (MvPolynomial.pderiv (3 : Fin 4) (P k))| ≤ K k ∧ |MvPolynomial.eval (xs b k p.1 t) (MvPolynomial.pderiv (3 : Fin 4) (MvPolynomial.pderiv (3 : Fin 4) (P k)))| ≤ K k) ∧ (K k)⁻¹ ≤ |MvPolynomial.eval (xs b k p.1 p.2) (MvPolynomial.pderiv (3 : Fin 4) (P k))|)
+
+/-- Hypothesis block 2: the pure and joint caps. -/
+def Hyp2 (N K : ℕ → ℝ) (d S : ℝ) {α : Type} [MeasurableSpace α] (μ : ℕ → Measure (α × ℝ))
+    (π : ℕ → Measure ℝ) (b : ℕ → α → Fin 6 → ℝ) (P : ℕ → MvPolynomial (Fin 4) ℝ) : Prop :=
+  ∀ R : ℝ, 1 < R → ∀ᶠ k in Filter.atTop, ∀ r s v : ℝ, R⁻¹ ≤ r → r ≤ R → 0 ≤ s → s ≤ R → R⁻¹ ≤ v → v ≤ R → (∀ a : ℤ, π k {w : ℝ | ⌊w / (N k ^ (-v))⌋ = a} ≤ ENNReal.ofReal (K k * N k ^ (-S * v))) ∧ (∀ h : Bool, ∀ (q : Fin 3 → ℤ) (a : ℤ), μ k {p | zc b k (N k) r p = q ∧ ⌊(if h then MvPolynomial.eval (xs b k p.1 p.2) (P k) else (xs b k p.1 p.2) 3) / (N k ^ (-s))⌋ = a} ≤ ENNReal.ofReal (K k * N k ^ (-3 * r - d * s))) ∧ (∀ h : Bool, ∀ (q : Fin 3 → ℤ) (a v₀ : ℤ), μ k {p | zc b k (N k) r p = q ∧ ⌊(if h then MvPolynomial.eval (xs b k p.1 p.2) (P k) else (xs b k p.1 p.2) 3) / (N k ^ (-s))⌋ = a ∧ ⌊b k p.1 3 / (N k ^ (-v))⌋ = v₀} ≤ ENNReal.ofReal (K k * N k ^ (-3 * r - d * s)) * π k {w : ℝ | ⌊w / (N k ^ (-v))⌋ = v₀})
+
+/-- Hypothesis block 3: the true assignments and their horizontal fits at every depth. -/
+def Hyp3 (N K : ℕ → ℝ) (d κ ℓ U e₀ : ℝ) {α : Type} [MeasurableSpace α] (ν : ℕ → Measure α)
+    (μ : ℕ → Measure (α × ℝ)) (π : ℕ → Measure ℝ) (b : ℕ → α → Fin 6 → ℝ)
+    (P : ℕ → MvPolynomial (Fin 4) ℝ) (T n : ℕ → ℝ → ℕ) (j : (k : ℕ) → (s : ℝ) → Fin (n k s) → Fin (2 ^ T k s)) (A B : (k : ℕ) → (s : ℝ) → Fin (n k s) → Set α) (c : (k : ℕ) → (s : ℝ) → Fin (n k s) → Fin 5 → ℝ) (F : (k : ℕ) → (s : ℝ) → Fin (n k s) → MvPolynomial (Fin 4) ℝ) : Prop :=
+  ∀ R : ℝ, 1 < R → ∀ᶠ k in Filter.atTop, ∀ s : ℝ, R⁻¹ ≤ s → s ≤ U → (fun (q : ℝ) (a g : ℝ → ℝ) => N k ^ (κ * s) / K k ≤ (2 : ℝ) ^ T k s ∧ (2 : ℝ) ^ T k s ≤ K k * N k ^ (κ * s) ∧ (∀ i, MeasurableSet (A k s i) ∧ MeasurableSet (B k s i) ∧ B k s i ⊆ A k s i) ∧ (∀ i i', i ≠ i' → j k s i = j k s i' → Disjoint (A k s i) (A k s i')) ∧ (∀ i, ENNReal.ofReal (a s ^ d * q ^ 2 * g s / K k) ≤ ν k (A k s i) ∧ ν k (A k s i) ≤ ENNReal.ofReal (K k * a s ^ d * q ^ 2 * g s) ∧ ENNReal.ofReal (q / K k) * ν k (A k s i) ≤ μ k (B k s i ×ˢ Iv (T k s) (j k s i)) ∧ (∀ e, |c k s i e| ≤ K k) ∧ (F k s i).totalDegree ≤ 2 ∧ (∀ l ∈ A k s i, ∀ t ∈ Iv (T k s) (j k s i), |(xs b k l t) 1 - c k s i 0 - t * c k s i 1| ≤ K k * q ∧ |(xs b k l t) 2 - c k s i 2 - t * c k s i 3 - c k s i 4 * (xs b k l t) 1| ≤ K k * q * g s ∧ |b k l 4 - c k s i 3 - c k s i 4 * b k l 3| ≤ K k * g s) ∧ (∀ l ∈ B k s i, fitP b k (K k) (a s) (F k s i) l (Iv (T k s) (j k s i))) ∧ (∀ᵐ p ∂μ k, p.1 ∈ B k s i → p.2 ∈ Iv (T k s) (j k s i) → (K k)⁻¹ ≤ |MvPolynomial.eval (xs b k p.1 p.2) (MvPolynomial.pderiv (3 : Fin 4) (F k s i))|) ∧ (true = true → P k = MvPolynomial.X (3 : Fin 4) ∧ (∀ᵐ p ∂μ k, |b k p.1 4 + b k p.1 0| ≤ N k ^ (-e₀)) ∧ |c k s i 3 + c k s i 0 + ((j k s i : ℕ) + (1 : ℝ) / 2) * q * c k s i 1| + |c k s i 4 - ((j k s i : ℕ) + (1 : ℝ) / 2) * q| ≤ K k * q ∧ (∃ L : Fin 4 → ℝ, F k s i = MvPolynomial.X (3 : Fin 4) - (MvPolynomial.C (L 0) + MvPolynomial.C (L 1) * MvPolynomial.X (0 : Fin 4) + MvPolynomial.C (L 2) * MvPolynomial.X (1 : Fin 4) + MvPolynomial.C (L 3) * MvPolynomial.X (2 : Fin 4)) ∧ |L 3| ≤ K k * (1 + a s / q ^ 2) ∧ ∀ l ∈ B k s i, ∀ t ∈ Iv (T k s) (j k s i), |L 1 - (xs b k l t) 1 * L 3| + |L 2 + t * L 3| ≤ K k * (1 + a s / q)))) ∧ (∀ᵐ p ∂μ k, ∃ i, p.1 ∈ B k s i ∧ p.2 ∈ Iv (T k s) (j k s i)) ∧ (∀ (i : Fin (n k s)) (v : ℝ) (v₀ : ℤ), R⁻¹ ≤ v → v ≤ R → μ k {p | p.1 ∈ B k s i ∧ p.2 ∈ Iv (T k s) (j k s i) ∧ ⌊b k p.1 3 / (N k ^ (-v))⌋ = v₀} ≤ ENNReal.ofReal (K k * q) * ν k (A k s i) * π k {w : ℝ | ⌊w / (N k ^ (-v))⌋ = v₀})) ((2 : ℝ) ^ (-(T k s : ℤ))) (fun s => N k ^ (-s)) (fun s => N k ^ (-ℓ * s))
+
+/-- Hypothesis block 4: nesting of the true assignments. -/
+def Hyp4 (U : ℝ) {α : Type} (T n : ℕ → ℝ → ℕ) (j : (k : ℕ) → (s : ℝ) → Fin (n k s) → Fin (2 ^ T k s))
+    (A : (k : ℕ) → (s : ℝ) → Fin (n k s) → Set α) : Prop :=
+  ∀ R : ℝ, 1 < R → ∀ᶠ k in Filter.atTop, ∀ s t : ℝ, R⁻¹ ≤ s → s < t → t ≤ U → ∀ i : Fin (n k t), ∃ h : Fin (n k s), A k t i ⊆ A k s h ∧ Iv (T k t) (j k t i) ⊆ Iv (T k s) (j k s h)
+
+/-- The frozen `fullTime = true` output: endpoint `G(2κ)` layers with a coefficient budget. -/
+def EndpointConclusion (N : ℕ → ℝ) (d κ U e₀ : ℝ) {α : Type} [MeasurableSpace α]
+    (ρ : ℕ → Measure (α × ℝ)) (π : ℕ → Measure ℝ) (b : ℕ → α → Fin 6 → ℝ) : Prop :=
+  ∃ sMax R : ℝ, 0 < sMax ∧ 2 * sMax < U ∧ 100 * sMax < e₀ ∧ 1 < R ∧ ∀ (m : ℕ) (sH : Fin m → ℝ), (∀ r, 0 < sH r ∧ sH r < sMax) → ∀ ε : ℝ, 0 < ε → ∀ᶠ k in Filter.atTop, ∃ ρH : MeasureTheory.Measure (α × ℝ), ρH ≤ ρ k ∧ ENNReal.ofReal (N k ^ (-ε)) ≤ ρH Set.univ ∧ ∃ (nH : Fin m → ℕ) (AH : (r : Fin m) → Fin (nH r) → Set α) (qH : (r : Fin m) → Fin (nH r) → Fin 3 → ℤ) (hH : (r : Fin m) → Fin (nH r) → Fin 6 → ℝ), ∀ r, (fun (χ D a : ℝ) (H : (Fin 6 → ℝ) → ℝ → ℝ → ℝ → ℝ) => (∀ i, MeasurableSet (AH r i)) ∧ (∀ i i', i ≠ i' → Disjoint (AH r i) (AH r i')) ∧ (∀ i, (∀ l ∈ AH r i, ⌊b k l 3 / χ⌋ = qH r i 0 ∧ ⌊b k l 0 / D⌋ = qH r i 1 ∧ ⌊b k l 1 / D⌋ = qH r i 2) ∧ (∀ e, |hH r i e| ≤ N k ^ R) ∧ (∀ t ∈ Set.Icc (0 : ℝ) 1, ∀ p ∈ Set.Icc ((qH r i 1 : ℝ) * D) (((qH r i 1 : ℝ) + 1) * D), ∀ q ∈ Set.Icc ((qH r i 2 : ℝ) * D) (((qH r i 2 : ℝ) + 1) * D), |H (hH r i) t p q| ≤ N k ^ ε) ∧ (∀ l ∈ AH r i, ∀ t ∈ Set.Icc (0 : ℝ) 1, |(xs b k l t) 3 - H (hH r i) t (b k l 0) (b k l 1)| ≤ N k ^ ε * a) ∧ ENNReal.ofReal (D ^ 2 * a ^ d / N k ^ ε) * π k (Set.Ico ((qH r i 0 : ℝ) * χ) (((qH r i 0 : ℝ) + 1) * χ)) ≤ ρH (AH r i ×ˢ Set.Icc (0 : ℝ) 1)) ∧ ρH {p | ∃ i, p.1 ∈ AH r i}ᶜ = 0) (N k ^ (-e₀)) (N k ^ (-2 * κ * sH r)) (N k ^ (-sH r)) (fun h t p q => h 0 + h 1 * t + (h 2 + h 3 * t) * p + (h 4 + h 5 * t) * q)
+
+/-- One layer of disjoint full-time labels at sample `k`, parameter width `D`, thickness `a`
+(velocity width `N k ^ (-e₀)`), WITHOUT the coefficient budget. -/
+def LayerAt (N : ℕ → ℝ) (d e₀ : ℝ) {α : Type} [MeasurableSpace α] (π : ℕ → Measure ℝ)
+    (b : ℕ → α → Fin 6 → ℝ) (k : ℕ) (ε : ℝ) (ρH : Measure (α × ℝ)) (D a : ℝ) (nH : ℕ)
+    (AH : Fin nH → Set α) (qH : Fin nH → Fin 3 → ℤ) (hH : Fin nH → Fin 6 → ℝ) : Prop :=
+  (fun (χ : ℝ) (H : (Fin 6 → ℝ) → ℝ → ℝ → ℝ → ℝ) => (∀ i, MeasurableSet (AH i)) ∧ (∀ i i', i ≠ i' → Disjoint (AH i) (AH i')) ∧ (∀ i, (∀ l ∈ AH i, ⌊b k l 3 / χ⌋ = qH i 0 ∧ ⌊b k l 0 / D⌋ = qH i 1 ∧ ⌊b k l 1 / D⌋ = qH i 2) ∧ (∀ t ∈ Set.Icc (0 : ℝ) 1, ∀ p ∈ Set.Icc ((qH i 1 : ℝ) * D) (((qH i 1 : ℝ) + 1) * D), ∀ q ∈ Set.Icc ((qH i 2 : ℝ) * D) (((qH i 2 : ℝ) + 1) * D), |H (hH i) t p q| ≤ N k ^ ε) ∧ (∀ l ∈ AH i, ∀ t ∈ Set.Icc (0 : ℝ) 1, |(xs b k l t) 3 - H (hH i) t (b k l 0) (b k l 1)| ≤ N k ^ ε * a) ∧ ENNReal.ofReal (D ^ 2 * a ^ d / N k ^ ε) * π k (Set.Ico ((qH i 0 : ℝ) * χ) (((qH i 0 : ℝ) + 1) * χ)) ≤ ρH (AH i ×ˢ Set.Icc (0 : ℝ) 1)) ∧ ρH {p | ∃ i, p.1 ∈ AH i}ᶜ = 0) (N k ^ (-e₀)) (fun h t p q => h 0 + h 1 * t + (h 2 + h 3 * t) * p + (h 4 + h 5 * t) * q)
+
+/-- Property `G(u)` for one prepared input: for every finite list of depths below `sMax` and
+every loss `ε`, eventually one common residual `ρH ≤ ρ k` carries disjoint full-time labels
+at parameter width `N^(-u s)` at every listed depth. -/
+def LayersAt (N : ℕ → ℝ) (d e₀ u sMax : ℝ) {α : Type} [MeasurableSpace α]
+    (ρ : ℕ → Measure (α × ℝ)) (π : ℕ → Measure ℝ) (b : ℕ → α → Fin 6 → ℝ) : Prop :=
+  ∀ (m : ℕ) (sH : Fin m → ℝ), (∀ r, 0 < sH r ∧ sH r < sMax) → ∀ ε : ℝ, 0 < ε →
+    ∀ᶠ k in Filter.atTop, ∃ ρH : Measure (α × ℝ), ρH ≤ ρ k ∧
+      ENNReal.ofReal (N k ^ (-ε)) ≤ ρH Set.univ ∧
+      ∃ (nH : Fin m → ℕ) (AH : (r : Fin m) → Fin (nH r) → Set α)
+        (qH : (r : Fin m) → Fin (nH r) → Fin 3 → ℤ) (hH : (r : Fin m) → Fin (nH r) → Fin 6 → ℝ),
+        ∀ r, LayerAt N d e₀ π b k ε ρH (N k ^ (-u * sH r)) (N k ^ (-sH r)) (nH r) (AH r) (qH r)
+          (hH r)
+
+/-- Property `G(u)` for EVERY prepared horizontal input with the structural constants
+`d κ ℓ S U e₀`, at one common `sMax`. -/
+def EngineAt (d κ ℓ S U e₀ u sMax : ℝ) : Prop :=
+  ∀ (N K : ℕ → ℝ), (∀ k, 2 ≤ N k) → Filter.Tendsto N Filter.atTop Filter.atTop →
+    ((∀ k, 1 ≤ K k) ∧ ∀ ε : ℝ, 0 < ε → ∀ᶠ k in Filter.atTop, K k ≤ N k ^ ε) →
+    ∀ (α : Type) [MeasurableSpace α] (ν : ℕ → Measure α) (μ ρ : ℕ → Measure (α × ℝ))
+      (π : ℕ → Measure ℝ) (b : ℕ → α → Fin 6 → ℝ) (P : ℕ → MvPolynomial (Fin 4) ℝ)
+      (T n : ℕ → ℝ → ℕ) (j : (k : ℕ) → (s : ℝ) → Fin (n k s) → Fin (2 ^ T k s)) (A B : (k : ℕ) → (s : ℝ) → Fin (n k s) → Set α) (c : (k : ℕ) → (s : ℝ) → Fin (n k s) → Fin 5 → ℝ) (F : (k : ℕ) → (s : ℝ) → Fin (n k s) → MvPolynomial (Fin 4) ℝ),
+      Hyp1 K ν μ ρ π b P → Hyp2 N K d S μ π b P → Hyp3 N K d κ ℓ U e₀ ν μ π b P T n j A B c F →
+      Hyp4 U T n j A → LayersAt N d e₀ u sMax ρ π b
+
+/-- One layer of disjoint full-time labels at sample `k`, parameter width `D`, thickness `a`
+(velocity width `N k ^ (-e₀)`), WITH the coefficient budget `|h_e| ≤ N k ^ R`: the layer of
+the frozen conclusion. -/
+def BudgetLayerAt (N : ℕ → ℝ) (d e₀ R : ℝ) {α : Type} [MeasurableSpace α] (π : ℕ → Measure ℝ)
+    (b : ℕ → α → Fin 6 → ℝ) (k : ℕ) (ε : ℝ) (ρH : Measure (α × ℝ)) (D a : ℝ) (nH : ℕ)
+    (AH : Fin nH → Set α) (qH : Fin nH → Fin 3 → ℤ) (hH : Fin nH → Fin 6 → ℝ) : Prop :=
+  (fun (χ : ℝ) (H : (Fin 6 → ℝ) → ℝ → ℝ → ℝ → ℝ) => (∀ i, MeasurableSet (AH i)) ∧ (∀ i i', i ≠ i' → Disjoint (AH i) (AH i')) ∧ (∀ i, (∀ l ∈ AH i, ⌊b k l 3 / χ⌋ = qH i 0 ∧ ⌊b k l 0 / D⌋ = qH i 1 ∧ ⌊b k l 1 / D⌋ = qH i 2) ∧ (∀ e, |hH i e| ≤ N k ^ R) ∧ (∀ t ∈ Set.Icc (0 : ℝ) 1, ∀ p ∈ Set.Icc ((qH i 1 : ℝ) * D) (((qH i 1 : ℝ) + 1) * D), ∀ q ∈ Set.Icc ((qH i 2 : ℝ) * D) (((qH i 2 : ℝ) + 1) * D), |H (hH i) t p q| ≤ N k ^ ε) ∧ (∀ l ∈ AH i, ∀ t ∈ Set.Icc (0 : ℝ) 1, |(xs b k l t) 3 - H (hH i) t (b k l 0) (b k l 1)| ≤ N k ^ ε * a) ∧ ENNReal.ofReal (D ^ 2 * a ^ d / N k ^ ε) * π k (Set.Ico ((qH i 0 : ℝ) * χ) (((qH i 0 : ℝ) + 1) * χ)) ≤ ρH (AH i ×ˢ Set.Icc (0 : ℝ) 1)) ∧ ρH {p | ∃ i, p.1 ∈ AH i}ᶜ = 0) (N k ^ (-e₀)) (fun h t p q => h 0 + h 1 * t + (h 2 + h 3 * t) * p + (h 4 + h 5 * t) * q)
+
+/-- The frozen one-rate output for one prepared input: `G(u)` layers at every finite list of
+depths below `sMax`, WITH the coefficient budget `N k ^ R`. -/
+def BudgetLayersAt (N : ℕ → ℝ) (d e₀ R u sMax : ℝ) {α : Type} [MeasurableSpace α]
+    (ρ : ℕ → Measure (α × ℝ)) (π : ℕ → Measure ℝ) (b : ℕ → α → Fin 6 → ℝ) : Prop :=
+  ∀ (m : ℕ) (sH : Fin m → ℝ), (∀ r, 0 < sH r ∧ sH r < sMax) → ∀ ε : ℝ, 0 < ε →
+    ∀ᶠ k in Filter.atTop, ∃ ρH : Measure (α × ℝ), ρH ≤ ρ k ∧
+      ENNReal.ofReal (N k ^ (-ε)) ≤ ρH Set.univ ∧
+      ∃ (nH : Fin m → ℕ) (AH : (r : Fin m) → Fin (nH r) → Set α)
+        (qH : (r : Fin m) → Fin (nH r) → Fin 3 → ℤ) (hH : (r : Fin m) → Fin (nH r) → Fin 6 → ℝ),
+        ∀ r, BudgetLayerAt N d e₀ R π b k ε ρH (N k ^ (-u * sH r)) (N k ^ (-sH r)) (nH r) (AH r)
+          (qH r) (hH r)
+
+/-- The corresponding frozen premise of o245 (and of its parent o217). -/
+def ScalarInput : Prop := ((∀ d s m C S U ε : ℝ, 0 ≤ d → d < 1 → 0 < s → s < m → 0 < C → 0 < S → 0 < U → U < m → 0 < ε → ∃ η : ℝ, 0 < η ∧ ∃ N₀ : ℝ, 2 ≤ N₀ ∧ ∀ N : ℝ, N₀ ≤ N → ∀ (α : Type) [MeasurableSpace α] (ν : MeasureTheory.Measure α) (μ : MeasureTheory.Measure (α × ℝ)) (b : α → Fin 5 → ℝ) (c : ℝ) (angular : Bool), (fun a : ℝ => (fun σ : ℝ => (fun y : α → ℝ → ℝ => (fun x : α → ℝ → ℝ => (fun z : α × ℝ → Fin 2 → ℤ => Measurable b → MeasureTheory.IsProbabilityMeasure ν → μ ≤ ENNReal.ofReal (N ^ η) • (ν.prod MeasureTheory.volume) → μ (Set.univ ×ˢ Set.Icc (0 : ℝ) 1)ᶜ = 0 → ENNReal.ofReal (N ^ (-η)) ≤ μ Set.univ → (∀ l i, |b l i| ≤ N ^ η) → N ^ (-C) ≤ c → c ≤ N ^ C → (∀ (r : ℝ) (q : Fin 2 → ℤ) (j : ℤ), 0 ≤ r → r ≤ s → μ {p | z p = q ∧ ⌊x p.1 p.2 / (N ^ (-r))⌋ = j} ≤ ENNReal.ofReal (N ^ η * σ ^ 2 * c * (N ^ (-r)) ^ d)) → (∃ F : Finset ((Fin 2 → ℤ) × ℤ), (F.card : ℝ) * σ ^ 2 ≤ N ^ η * c⁻¹ * a ^ (-d) ∧ ∀ᵐ p ∂μ, (z p, ⌊x p.1 p.2 / a⌋) ∈ F) → (angular = true → ∀ (r : ℝ) (q : Fin 2 → ℤ) (j k : ℤ), 0 < r → r ≤ U → μ {p | z p = q ∧ ⌊x p.1 p.2 / a⌋ = j ∧ ⌊b p.1 1 / (N ^ (-r))⌋ = k} ≤ ENNReal.ofReal (N ^ η * σ ^ 2 * c * a ^ d * N ^ (-S * r))) → ∃ (n : ℕ) (β : ℝ) (A : Fin n → Set α) (u v : Fin n → ℝ) (P : Fin n → MvPolynomial (Fin 2) ℝ), σ / N ^ ε ≤ β ∧ β ≤ N ^ ε ∧ (angular = true → N ^ (-ε) ≤ β) ∧ (∀ i, MeasurableSet (A i)) ∧ (∀ i j, i ≠ j → Disjoint (A i) (A j)) ∧ (∀ i, |u i| + |v i| ≤ N ^ ε ∧ (P i).totalDegree ≤ 2 ∧ (∀ t ∈ Set.Icc (0 : ℝ) 1, ∀ w ∈ Set.Icc (-1 : ℝ) 1, |MvPolynomial.eval ![t, u i + t * v i + β * w] (P i)| ≤ N ^ ε) ∧ (∀ l ∈ A i, ∀ t ∈ Set.Icc (0 : ℝ) 1, |y l t - u i - t * v i| ≤ N ^ ε * β ∧ |x l t - MvPolynomial.eval ![t, y l t] (P i)| ≤ N ^ ε * a) ∧ ENNReal.ofReal (c * a ^ d * β / N ^ ε) ≤ μ (A i ×ˢ Set.Icc (0 : ℝ) 1)) ∧ ENNReal.ofReal (N ^ (-ε)) ≤ μ {p | ∃ i, p.1 ∈ A i}) (fun p => ![⌊p.2 / σ⌋, ⌊y p.1 p.2 / σ⌋])) (fun l t => b l 2 + t * b l 3 + t ^ 2 * b l 4)) (fun l t => b l 0 + t * b l 1)) (N ^ (-m))) (N ^ (-s))))
+
+/-- The corresponding frozen premise of o245 (and of its parent o217). -/
+def RowInput : Prop := ((∀ S a ε : ℝ, 0 < S → 0 < a → 0 < ε → ∃ η : ℝ, 0 < η ∧ ∃ N₀ : ℝ, 2 ≤ N₀ ∧ ∀ N : ℝ, N₀ ≤ N → ∀ (α : Type) [MeasurableSpace α] (ν : MeasureTheory.Measure α) (μ : MeasureTheory.Measure (α × ℝ)) (b v H : α → ℝ) (T : α × ℝ → Fin 2 → ℝ) (π : MeasureTheory.Measure ℝ) (E : ℝ) (F : (Fin 2 → ℤ) → Finset (Fin 2 → ℤ)), (fun ξ : ℝ => (fun z : α × ℝ → Fin 2 → ℝ => (fun q : α × ℝ → Fin 2 → ℤ => Measurable b → Measurable v → Measurable H → Measurable T → MeasureTheory.IsProbabilityMeasure ν → MeasureTheory.IsProbabilityMeasure π → ξ ≤ E → E ≤ 1 → (∀ l, |b l| + |v l| ≤ N ^ η) → μ ≤ ENNReal.ofReal (N ^ η) • (ν.prod MeasureTheory.volume) → μ (Set.univ ×ˢ Set.Icc (0 : ℝ) 1)ᶜ = 0 → ENNReal.ofReal (N ^ (-η)) ≤ μ Set.univ → (∀ x r : ℝ, ξ ≤ r → r ≤ 1 → π (Set.Icc (x - r) (x + r)) ≤ ENNReal.ofReal (N ^ η * r ^ S)) → (∀ (p₀ : Fin 2 → ℤ) (j : ℤ), μ {p | q p = p₀ ∧ ⌊v p.1 / ξ⌋ = j} ≤ ENNReal.ofReal (N ^ η * ξ ^ 2) * π (Set.Ico ((j : ℝ) * ξ) (((j : ℝ) + 1) * ξ))) → (∀ p₀, ((F p₀).card : ℝ) ≤ N ^ η) → (∀ᵐ p ∂μ, (∀ j, |T p j| ≤ N ^ η) ∧ (fun j => ⌊T p j / E⌋) ∈ F (q p) ∧ |T p 0 + v p.1 * T p 1 - H p.1| ≤ N ^ η * E) → ∃ (B : Fin 2 → ℝ) (ℓ : ℝ), |B 0| + |B 1| + |ℓ| ≤ N ^ ε ∧ ENNReal.ofReal (N ^ (-ε)) ≤ μ {p | |T p 0 - B 0 + ℓ * z p 1| ≤ N ^ ε * E ∧ |T p 1 - B 1 - ℓ * z p 0| ≤ N ^ ε * E}) (fun p j => ⌊z p j / ξ⌋)) (fun p => ![p.2, b p.1 + p.2 * v p.1])) (N ^ (-a))))
+
+/-- The corresponding frozen premise of o245 (and of its parent o217). -/
+def MatchingInput : Prop := ((∀ (D J : ℕ), 1 ≤ D → D < J → ∀ d : ℝ, 0 ≤ d → d < 1 → ∃ η : ℝ, 0 < η ∧ ∃ N₀ : ℝ, 2 ≤ N₀ ∧ ∀ N : ℝ, N₀ ≤ N → ∀ (n₁ n₂ : ℕ) (f₁ : Fin n₁ → ℝ → ℝ) (f₂ : Fin n₂ → ℝ → ℝ) (π₁ : Fin n₁ → ℝ) (π₂ : Fin n₂ → ℝ) (μ : MeasureTheory.Measure ((Fin n₁ × Fin n₂) × ℝ)), (n₁ : ℝ) ≤ N ^ (d + η) → (n₂ : ℝ) ≤ N ^ (d + η) → (∀ i : Fin n₁, ContDiffOn ℝ (J + 1) (f₁ i) (Set.Ioo (-1 : ℝ) 2)) → (∀ i : Fin n₂, ContDiffOn ℝ (J + 1) (f₂ i) (Set.Ioo (-1 : ℝ) 2)) → (∀ (i : Fin n₁) (j : ℕ), j ≤ J + 1 → ∀ t ∈ Set.Icc (0 : ℝ) 1, |iteratedDeriv j (f₁ i) t| ≤ N ^ η) → (∀ (i : Fin n₂) (j : ℕ), j ≤ J + 1 → ∀ t ∈ Set.Icc (0 : ℝ) 1, |iteratedDeriv j (f₂ i) t| ≤ N ^ η) → (∀ i : Fin n₁, 0 ≤ π₁ i) → (∀ i : Fin n₂, 0 ≤ π₂ i) → (∑ i : Fin n₁, π₁ i) = 1 → (∑ i : Fin n₂, π₂ i) = 1 → MeasureTheory.IsProbabilityMeasure μ → (∀ (i : Fin n₁) (E : Set ℝ), MeasurableSet E → μ {p | p.1.1 = i ∧ p.2 ∈ E} ≤ ENNReal.ofReal (N ^ η * π₁ i) * MeasureTheory.volume E) → (∀ (i : Fin n₂) (E : Set ℝ), MeasurableSet E → μ {p | p.1.2 = i ∧ p.2 ∈ E} ≤ ENNReal.ofReal (N ^ η * π₂ i) * MeasureTheory.volume E) → ¬ μ {p | p.2 ∈ Set.Icc (0 : ℝ) 1 ∧ |f₁ p.1.1 p.2 - f₂ p.1.2 p.2| ≤ N ^ (-1 + η) ∧ ∃ j : ℕ, 1 ≤ j ∧ j ≤ D ∧ N ^ (-η) ≤ |iteratedDeriv j (f₁ p.1.1) p.2 - iteratedDeriv j (f₂ p.1.2) p.2|}ᶜ = 0))
+
+/-- The frozen engine of o245: prepared-data layers for a rate family, with an optional fixed base buffer. -/
+def RateEngine : Bool → (ℝ → ℝ → Prop) → Prop := (fun (fixedBuffer : Bool) (rates : ℝ → ℝ → Prop) => ((fun (horizontal : Bool) (regime : ℝ → Prop) => ∀ (N K : ℕ → ℝ), (∀ k, 2 ≤ N k) → Filter.Tendsto N Filter.atTop Filter.atTop → ((∀ k, 1 ≤ K k) ∧ ∀ ε : ℝ, 0 < ε → ∀ᶠ k in Filter.atTop, K k ≤ N k ^ ε) → ∀ d κ ℓ S U e₀ : ℝ, 0 ≤ d → d < 1 → 0 < κ → κ ≤ 1 → 0 < ℓ → 0 < S → S ≤ 1 → 0 < U → 0 < e₀ → regime κ → (horizontal = true → ℓ = κ) → ∀ (α : Type) [MeasurableSpace α] (ν : ℕ → MeasureTheory.Measure α) (μ ρ : ℕ → MeasureTheory.Measure (α × ℝ)) (π : ℕ → MeasureTheory.Measure ℝ) (b : ℕ → α → Fin 6 → ℝ) (P : ℕ → MvPolynomial (Fin 4) ℝ) (T n : ℕ → ℝ → ℕ) (j : (k : ℕ) → (s : ℝ) → Fin (n k s) → Fin (2 ^ T k s)) (A B : (k : ℕ) → (s : ℝ) → Fin (n k s) → Set α) (c : (k : ℕ) → (s : ℝ) → Fin (n k s) → Fin 5 → ℝ) (F : (k : ℕ) → (s : ℝ) → Fin (n k s) → MvPolynomial (Fin 4) ℝ), (fun (x : ℕ → α → ℝ → Fin 4 → ℝ) (I : (T : ℕ) → Fin (2 ^ T) → Set ℝ) => (fun z : ℕ → ℝ → ℝ → (α × ℝ) → Fin 3 → ℤ => (fun fit : ℕ → ℝ → ℝ → MvPolynomial (Fin 4) ℝ → α → Set ℝ → Prop => (∀ k, Measurable (b k) ∧ MeasureTheory.IsProbabilityMeasure (ν k) ∧ MeasureTheory.IsProbabilityMeasure (π k) ∧ μ k ≤ ENNReal.ofReal (K k) • ((ν k).prod MeasureTheory.volume) ∧ ρ k ≤ μ k ∧ μ k (Set.univ ×ˢ Set.Icc (0 : ℝ) 1)ᶜ = 0 ∧ ENNReal.ofReal ((K k)⁻¹) ≤ ρ k Set.univ ∧ (P k).totalDegree ≤ 2 ∧ (∀ᵐ l ∂ν k, |b k l 0| + |b k l 1| + |b k l 3| + |b k l 4| ≤ K k) ∧ (∀ᵐ p ∂μ k, (∀ t ∈ Set.Icc (0 : ℝ) 1, |MvPolynomial.eval (x k p.1 t) (P k)| ≤ K k ∧ |MvPolynomial.eval (x k p.1 t) (MvPolynomial.pderiv (3 : Fin 4) (P k))| ≤ K k ∧ |MvPolynomial.eval (x k p.1 t) (MvPolynomial.pderiv (3 : Fin 4) (MvPolynomial.pderiv (3 : Fin 4) (P k)))| ≤ K k) ∧ (K k)⁻¹ ≤ |MvPolynomial.eval (x k p.1 p.2) (MvPolynomial.pderiv (3 : Fin 4) (P k))|)) → (∀ R : ℝ, 1 < R → ∀ᶠ k in Filter.atTop, ∀ r s v : ℝ, R⁻¹ ≤ r → r ≤ R → 0 ≤ s → s ≤ R → R⁻¹ ≤ v → v ≤ R → (∀ a : ℤ, π k {w : ℝ | ⌊w / (N k ^ (-v))⌋ = a} ≤ ENNReal.ofReal (K k * N k ^ (-S * v))) ∧ (∀ h : Bool, ∀ (q : Fin 3 → ℤ) (a : ℤ), μ k {p | z k (N k) r p = q ∧ ⌊(if h then MvPolynomial.eval (x k p.1 p.2) (P k) else (x k p.1 p.2) 3) / (N k ^ (-s))⌋ = a} ≤ ENNReal.ofReal (K k * N k ^ (-3 * r - d * s))) ∧ (∀ h : Bool, ∀ (q : Fin 3 → ℤ) (a v₀ : ℤ), μ k {p | z k (N k) r p = q ∧ ⌊(if h then MvPolynomial.eval (x k p.1 p.2) (P k) else (x k p.1 p.2) 3) / (N k ^ (-s))⌋ = a ∧ ⌊b k p.1 3 / (N k ^ (-v))⌋ = v₀} ≤ ENNReal.ofReal (K k * N k ^ (-3 * r - d * s)) * π k {w : ℝ | ⌊w / (N k ^ (-v))⌋ = v₀})) → (∀ R : ℝ, 1 < R → ∀ᶠ k in Filter.atTop, ∀ s : ℝ, R⁻¹ ≤ s → s ≤ U → (fun (q : ℝ) (a g : ℝ → ℝ) => N k ^ (κ * s) / K k ≤ (2 : ℝ) ^ T k s ∧ (2 : ℝ) ^ T k s ≤ K k * N k ^ (κ * s) ∧ (∀ i, MeasurableSet (A k s i) ∧ MeasurableSet (B k s i) ∧ B k s i ⊆ A k s i) ∧ (∀ i i', i ≠ i' → j k s i = j k s i' → Disjoint (A k s i) (A k s i')) ∧ (∀ i, ENNReal.ofReal (a s ^ d * q ^ 2 * g s / K k) ≤ ν k (A k s i) ∧ ν k (A k s i) ≤ ENNReal.ofReal (K k * a s ^ d * q ^ 2 * g s) ∧ ENNReal.ofReal (q / K k) * ν k (A k s i) ≤ μ k (B k s i ×ˢ I (T k s) (j k s i)) ∧ (∀ e, |c k s i e| ≤ K k) ∧ (F k s i).totalDegree ≤ 2 ∧ (∀ l ∈ A k s i, ∀ t ∈ I (T k s) (j k s i), |(x k l t) 1 - c k s i 0 - t * c k s i 1| ≤ K k * q ∧ |(x k l t) 2 - c k s i 2 - t * c k s i 3 - c k s i 4 * (x k l t) 1| ≤ K k * q * g s ∧ |b k l 4 - c k s i 3 - c k s i 4 * b k l 3| ≤ K k * g s) ∧ (∀ l ∈ B k s i, fit k (K k) (a s) (F k s i) l (I (T k s) (j k s i))) ∧ (∀ᵐ p ∂μ k, p.1 ∈ B k s i → p.2 ∈ I (T k s) (j k s i) → (K k)⁻¹ ≤ |MvPolynomial.eval (x k p.1 p.2) (MvPolynomial.pderiv (3 : Fin 4) (F k s i))|) ∧ (horizontal = true → P k = MvPolynomial.X (3 : Fin 4) ∧ (∀ᵐ p ∂μ k, |b k p.1 4 + b k p.1 0| ≤ N k ^ (-e₀)) ∧ |c k s i 3 + c k s i 0 + ((j k s i : ℕ) + (1 : ℝ) / 2) * q * c k s i 1| + |c k s i 4 - ((j k s i : ℕ) + (1 : ℝ) / 2) * q| ≤ K k * q ∧ (∃ L : Fin 4 → ℝ, F k s i = MvPolynomial.X (3 : Fin 4) - (MvPolynomial.C (L 0) + MvPolynomial.C (L 1) * MvPolynomial.X (0 : Fin 4) + MvPolynomial.C (L 2) * MvPolynomial.X (1 : Fin 4) + MvPolynomial.C (L 3) * MvPolynomial.X (2 : Fin 4)) ∧ |L 3| ≤ K k * (1 + a s / q ^ 2) ∧ ∀ l ∈ B k s i, ∀ t ∈ I (T k s) (j k s i), |L 1 - (x k l t) 1 * L 3| + |L 2 + t * L 3| ≤ K k * (1 + a s / q)))) ∧ (∀ᵐ p ∂μ k, ∃ i, p.1 ∈ B k s i ∧ p.2 ∈ I (T k s) (j k s i)) ∧ (∀ (i : Fin (n k s)) (v : ℝ) (v₀ : ℤ), R⁻¹ ≤ v → v ≤ R → μ k {p | p.1 ∈ B k s i ∧ p.2 ∈ I (T k s) (j k s i) ∧ ⌊b k p.1 3 / (N k ^ (-v))⌋ = v₀} ≤ ENNReal.ofReal (K k * q) * ν k (A k s i) * π k {w : ℝ | ⌊w / (N k ^ (-v))⌋ = v₀})) ((2 : ℝ) ^ (-(T k s : ℤ))) (fun s => N k ^ (-s)) (fun s => N k ^ (-ℓ * s))) → (∀ R : ℝ, 1 < R → ∀ᶠ k in Filter.atTop, ∀ s t : ℝ, R⁻¹ ≤ s → s < t → t ≤ U → ∀ i : Fin (n k t), ∃ h : Fin (n k s), A k t i ⊆ A k s h ∧ I (T k t) (j k t i) ⊆ I (T k s) (j k s h)) → (∃ sMax R : ℝ, 0 < sMax ∧ 2 * sMax < U ∧ 100 * sMax < e₀ ∧ 1 < R ∧ (fixedBuffer = true → sMax = min (U / 4) (e₀ / 200)) ∧ ∀ u : ℝ, rates κ u → ∀ (m : ℕ) (sH : Fin m → ℝ), (∀ r, 0 < sH r ∧ sH r < sMax) → ∀ ε : ℝ, 0 < ε → ∀ᶠ k in Filter.atTop, ∃ ρH : MeasureTheory.Measure (α × ℝ), ρH ≤ ρ k ∧ ENNReal.ofReal (N k ^ (-ε)) ≤ ρH Set.univ ∧ ∃ (nH : Fin m → ℕ) (AH : (r : Fin m) → Fin (nH r) → Set α) (qH : (r : Fin m) → Fin (nH r) → Fin 3 → ℤ) (hH : (r : Fin m) → Fin (nH r) → Fin 6 → ℝ), ∀ r, (fun (χ D a : ℝ) (H : (Fin 6 → ℝ) → ℝ → ℝ → ℝ → ℝ) => (∀ i, MeasurableSet (AH r i)) ∧ (∀ i i', i ≠ i' → Disjoint (AH r i) (AH r i')) ∧ (∀ i, (∀ l ∈ AH r i, ⌊b k l 3 / χ⌋ = qH r i 0 ∧ ⌊b k l 0 / D⌋ = qH r i 1 ∧ ⌊b k l 1 / D⌋ = qH r i 2) ∧ (∀ e, |hH r i e| ≤ N k ^ R) ∧ (∀ t ∈ Set.Icc (0 : ℝ) 1, ∀ p ∈ Set.Icc ((qH r i 1 : ℝ) * D) (((qH r i 1 : ℝ) + 1) * D), ∀ q ∈ Set.Icc ((qH r i 2 : ℝ) * D) (((qH r i 2 : ℝ) + 1) * D), |H (hH r i) t p q| ≤ N k ^ ε) ∧ (∀ l ∈ AH r i, ∀ t ∈ Set.Icc (0 : ℝ) 1, |(x k l t) 3 - H (hH r i) t (b k l 0) (b k l 1)| ≤ N k ^ ε * a) ∧ ENNReal.ofReal (D ^ 2 * a ^ d / N k ^ ε) * π k (Set.Ico ((qH r i 0 : ℝ) * χ) (((qH r i 0 : ℝ) + 1) * χ)) ≤ ρH (AH r i ×ˢ Set.Icc (0 : ℝ) 1)) ∧ ρH {p | ∃ i, p.1 ∈ AH r i}ᶜ = 0) (N k ^ (-e₀)) (N k ^ (-u * sH r)) (N k ^ (-sH r)) (fun h t p q => h 0 + h 1 * t + (h 2 + h 3 * t) * p + (h 4 + h 5 * t) * q))) (fun k H a Q l I => ∀ t ∈ I, |MvPolynomial.eval (x k l t) Q| ≤ H * a ∧ |MvPolynomial.eval (x k l t) (MvPolynomial.pderiv (3 : Fin 4) Q)| ≤ H ∧ |MvPolynomial.eval (x k l t) (MvPolynomial.pderiv (3 : Fin 4) (MvPolynomial.pderiv (3 : Fin 4) Q))| ≤ H / a)) (fun k Nk r p e => ⌊(![p.2, (x k p.1 p.2) 1, (x k p.1 p.2) 2] : Fin 3 → ℝ) e / (Nk ^ (-r))⌋)) (fun k l t => ![t, b k l 0 + t * b k l 3, b k l 1 + t * b k l 4, b k l 2 + t * b k l 5]) (fun T j => Set.Icc (((j : ℕ) : ℝ) / (2 : ℝ) ^ T) ((((j : ℕ) : ℝ) + 1) / (2 : ℝ) ^ T)))) true (fun κ => 2 * κ < 1))
+
+/-- The base engine of o245's hypothesis: `G(1)` with the fixed buffer. -/
+def Base : Prop := RateEngine true (fun (_κ u : ℝ) => u = 1)
+
+/-- The interior engine of o245's conclusion: `G(u)` for all `2κ < u ≤ 1`. -/
+def Interior : Prop := RateEngine false (fun (κ u : ℝ) => 2 * κ < u ∧ u ≤ 1)
+
+end Submission.Obl.k4_horizontal_strict_parameter_step
+
+end
