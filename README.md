@@ -20,8 +20,9 @@ theorem kakeya_four_dimensions (K : Set (EuclideanSpace ℝ (Fin 4)))
 
 In words: every subset of ℝ⁴ that contains a unit line segment in every direction has Hausdorff
 dimension 4. This is Theorem 1.1 of OpenAI, *Every four-dimensional Kakeya set has full Hausdorff
-dimension* (OpenAI math release, paper family 074, September 2026). The statement is the problem
-`oai_074_kakeya_four_dimensions`; `Challenge.lean` and `ChallengeDeps.lean` are used unchanged.
+dimension* (OpenAI math release, paper family 074, September 24, 2026)
+<sup>[[1]](#references)</sup>. The statement is the problem `oai_074_kakeya_four_dimensions`;
+`Challenge.lean` and `ChallengeDeps.lean` are used unchanged.
 
 The proof was produced by LOT, our multi-agent proof-tree system. The tree is `g-oai-074`. It started
 on 2026-10-21 at 01:44Z and its root was accepted on 2026-10-22 at 20:30Z, 42.8 h of wall clock with
@@ -68,9 +69,26 @@ All checks ran on the judged commit above, each in a fresh container.
 
 ## Credits
 
-- **Mathematics:** OpenAI's paper (family 074).
+- **Mathematics:** OpenAI's paper (family 074) <sup>[[1]](#references)</sup>.
 - **Formal statement:** the `oai_074_kakeya_four_dimensions` problem files.
 - **Libraries:** Mathlib, and lean-pool together with the projects listed in `proof/NOTICE`.
 - **Inlined library:** the Wang–Zahl three-dimensional library comes from our own earlier proof tree.
 
 This repository is private. Its license has not been decided yet.
+
+## References
+
+1. OpenAI. *Every four-dimensional Kakeya set has full Hausdorff dimension.* OpenAI mathematics release,
+   paper family 074, September 24, 2026.
+   <https://github.com/openai/math/tree/main/preprints/Every-four-dimensional-Kakeya-set-has-full-Hausdorff-dimension-September-24-2026>
+
+```bibtex
+@misc{openai2026kakeya4d,
+  author       = {{OpenAI}},
+  title        = {Every four-dimensional {K}akeya set has full {H}ausdorff dimension},
+  year         = {2026},
+  month        = sep,
+  note         = {OpenAI mathematics release, paper family 074, September 24, 2026},
+  howpublished = {\url{https://github.com/openai/math/tree/main/preprints/Every-four-dimensional-Kakeya-set-has-full-Hausdorff-dimension-September-24-2026}}
+}
+```
