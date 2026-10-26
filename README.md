@@ -1,5 +1,6 @@
 ---
 pretty_name: "Four-dimensional Kakeya sets have full Hausdorff dimension: a Lean 4 proof"
+license: apache-2.0
 tags:
 - lean4
 - mathlib
@@ -37,7 +38,10 @@ it, the stated theorem holds.
   - `Submission/Obl/` and `Submission/Lib/` (7,750 files, about 1.01 M lines) are the proof written in the tree.
   - `Submission/WZ/` (2,872 files, 370,727 lines) is our own earlier Lean proof of the three-dimensional
     Kakeya theorem (Wang–Zahl), Lean-Eval #2121, inlined as a library.
-  - `NOTICE` and `LICENSES/` list the imported libraries and the copied code, with their licenses.
+  - `NOTICE` and `LICENSES/` are the attribution files that LOT generated for the export. They are
+    kept byte for byte, so they still verify against `SHA256SUMS.proof`. The top-level `NOTICE`
+    supersedes them for attribution.
+- `LICENSE` is the Apache License 2.0, and `NOTICE` is the dataset's attribution notice.
 - `SHA256SUMS.proof` holds the sha256 of every file under `proof/`.
 - `verification/` holds the final-check record and the fidelity reviews summarised below.
 
@@ -70,11 +74,32 @@ All checks ran on the judged commit above, each in a fresh container.
 ## Credits
 
 - **Mathematics:** OpenAI's paper (family 074) <sup>[[1]](#references)</sup>.
-- **Formal statement:** the `oai_074_kakeya_four_dimensions` problem files.
-- **Libraries:** Mathlib, and lean-pool together with the projects listed in `proof/NOTICE`.
-- **Inlined library:** the Wang–Zahl three-dimensional library comes from our own earlier proof tree.
+- **Formal statement:** the `oai_074_kakeya_four_dimensions` problem files by Zhengyang Zhang, used
+  byte for byte.
+- **Libraries:** Mathlib, and lean-pool with three of its projects:
+  - NavierStokesAndEuler (OpenAI);
+  - SardMoreira (Yury G. Kudryashov);
+  - Zhang–Yeung (Christopher Boone), with the PFR code it vendors (PFR contributors).
+- **Adapted code:** two `ConicKernels.lean` files adapt a dimension argument from lean-pool's
+  MetricCodes (openai/ten-proofs; OpenAI, Dean Cureton).
+- **Our own earlier work:**
+  - the inlined Wang–Zahl three-dimensional library (`Submission/WZ/`);
+  - three Plancherel lemmas from our `annals_bose_gases` tree.
 
-This repository is private. Its license has not been decided yet.
+`NOTICE` gives the exact sources, revisions and changes.
+
+## License
+
+This dataset is licensed under the [Apache License 2.0](LICENSE).
+
+- Attribution: see the top-level [`NOTICE`](NOTICE). It supersedes `proof/NOTICE`, which is kept byte
+  for byte for verification.
+- Third-party code: the code included from others is Apache-2.0, and `NOTICE` lists it.
+- Exception: the license of the formal statement files (`proof/Challenge.lean`,
+  `proof/ChallengeDeps.lean`, `proof/Solution.lean` and the other problem files listed in `NOTICE`
+  §4.1) is still to be confirmed by their author.
+
+This repository is private.
 
 ## References
 
